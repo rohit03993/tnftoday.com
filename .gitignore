@@ -9,6 +9,35 @@
 htmlcov/
 *.log
 .DS_Store
+Thumbs.db
+.vscode/
+.idea/
 public/sw.js*
 public/workbox-*.js*
 public/swe-worker-*.js
+
+# Not part of deployable WP custom code (use server / separate ops)
+/docs/
+/infra/
+/pdf-service/
+
+# WordPress runtime (never commit)
+wordpress/wp-content/uploads/
+wordpress/wp-content/cache/
+wordpress/wp-content/upgrade/
+wordpress/wp-content/backup*/
+wordpress/wp-content/ai1wm-backups/
+
+# Parent theme: ship only our homepage pattern override; core theme comes from WordPress
+wordpress/wp-content/themes/twentytwentyfive/*
+!wordpress/wp-content/themes/twentytwentyfive/patterns/
+wordpress/wp-content/themes/twentytwentyfive/patterns/*
+!wordpress/wp-content/themes/twentytwentyfive/patterns/template-home-with-sidebar-news-blog.php
+
+# Default WP placeholder index files (optional; harmless if omitted from git)
+wordpress/wp-content/index.php
+wordpress/wp-content/plugins/index.php
+wordpress/wp-content/themes/index.php
+
+# Demo seeder: add to git when you want it on GitHub (remove this line to track)
+wordpress/wp-content/plugins/tnf-dummy-content/

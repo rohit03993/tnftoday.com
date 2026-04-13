@@ -1,6 +1,6 @@
 <?php
 /**
- * Footer copy and “total views” (Settings → TNF Footer).
+ * Footer copy (Settings → TNF Footer).
  *
  * @package TNF_News_Platform
  */
@@ -28,11 +28,9 @@ function tnf_footer_default_settings(): array {
 	);
 
 	return array(
-		'show_views_bar'   => 1,
-		'total_views'      => 0,
 		'disclaimer_text'  => $disclaimer,
-		'disclaimer_email' => '',
-		'credits_line'     => __('Designed & Developed by Your Team', 'tnf-news-platform'),
+		'disclaimer_email' => 'contact@tnftoday.com',
+		'credits_line'     => __('Designed & Developed with Love by Pal Digital', 'tnf-news-platform'),
 	);
 }
 
@@ -48,15 +46,16 @@ function tnf_footer_get_settings(): array {
 		$raw = array();
 	}
 
-	$out                     = array_merge($defaults, $raw);
-	$out['show_views_bar']   = (int) $out['show_views_bar'] ? 1 : 0;
-	$out['total_views']      = max(0, (int) $out['total_views']);
-	$out['disclaimer_text']  = is_string($out['disclaimer_text']) ? $out['disclaimer_text'] : $defaults['disclaimer_text'];
+	$out                    = array_merge($defaults, $raw);
+	$out['disclaimer_text'] = is_string($out['disclaimer_text']) ? $out['disclaimer_text'] : $defaults['disclaimer_text'];
 	$out['disclaimer_email'] = is_string($out['disclaimer_email']) ? sanitize_email($out['disclaimer_email']) : '';
 	$out['credits_line']     = is_string($out['credits_line']) ? $out['credits_line'] : $defaults['credits_line'];
 
 	if ($out['disclaimer_email'] === '') {
-		$out['disclaimer_email'] = sanitize_email((string) get_option('admin_email', ''));
+		$out['disclaimer_email'] = 'contact@tnftoday.com';
+	}
+	if (trim((string) $out['credits_line']) === '' || trim((string) $out['credits_line']) === 'Designed & Developed by Your Team') {
+		$out['credits_line'] = $defaults['credits_line'];
 	}
 
 	return $out;
@@ -72,18 +71,17 @@ function tnf_footer_settings_sanitize($input): array {
 		return $defaults;
 	}
 
-	$show  = isset($input['show_views_bar']) && (string) $input['show_views_bar'] === '1' ? 1 : 0;
-	$views = isset($input['total_views']) ? max(0, (int) $input['total_views']) : 0;
-	$text  = isset($input['disclaimer_text']) ? wp_unslash((string) $input['disclaimer_text']) : $defaults['disclaimer_text'];
+	$text = isset($input['disclaimer_text']) ? wp_unslash((string) $input['disclaimer_text']) : $defaults['disclaimer_text'];
 	$email = isset($input['disclaimer_email']) ? sanitize_email(wp_unslash((string) $input['disclaimer_email'])) : '';
+	if ($email === '') {
+		$email = 'contact@tnftoday.com';
+	}
 	$creds = isset($input['credits_line']) ? sanitize_text_field(wp_unslash((string) $input['credits_line'])) : $defaults['credits_line'];
 
 	return array(
-		'show_views_bar'     => $show,
-		'total_views'        => $views,
-		'disclaimer_text'    => $text,
-		'disclaimer_email'   => $email,
-		'credits_line'       => $creds,
+		'disclaimer_text'  => $text,
+		'disclaimer_email' => $email,
+		'credits_line'     => $creds,
 	);
 }
 
@@ -129,23 +127,10 @@ function tnf_footer_render_options_page(): void {
 	?>
 	<div class="wrap">
 		<h1><?php esc_html_e('TNF Footer', 'tnf-news-platform'); ?></h1>
-		<p class="description"><?php esc_html_e('Site-wide footer: views strip, disclaimer, copyright bar.', 'tnf-news-platform'); ?></p>
+		<p class="description"><?php esc_html_e('Site-wide footer: disclaimer and copyright bar.', 'tnf-news-platform'); ?></p>
 		<form method="post" action="options.php">
 			<?php settings_fields('tnf_footer_settings_group'); ?>
 			<table class="form-table" role="presentation">
-				<tr>
-					<th scope="row"><?php esc_html_e('Total views bar', 'tnf-news-platform'); ?></th>
-					<td>
-						<label>
-							<input type="checkbox" name="<?php echo esc_attr(tnf_footer_settings_option_key()); ?>[show_views_bar]" value="1" <?php checked($opts['show_views_bar'], 1); ?> />
-							<?php esc_html_e('Show the light gray “Total views” strip', 'tnf-news-platform'); ?>
-						</label>
-						<p>
-							<label for="tnf_footer_total_views"><?php esc_html_e('Displayed number', 'tnf-news-platform'); ?></label><br />
-							<input id="tnf_footer_total_views" class="small-text" type="number" min="0" step="1" name="<?php echo esc_attr(tnf_footer_settings_option_key()); ?>[total_views]" value="<?php echo esc_attr((string) $opts['total_views']); ?>" />
-						</p>
-					</td>
-				</tr>
 				<tr>
 					<th scope="row"><label for="tnf_footer_disclaimer"><?php esc_html_e('Disclaimer text', 'tnf-news-platform'); ?></label></th>
 					<td>
@@ -155,7 +140,8 @@ function tnf_footer_render_options_page(): void {
 				<tr>
 					<th scope="row"><label for="tnf_footer_email"><?php esc_html_e('Contact email (disclaimer)', 'tnf-news-platform'); ?></label></th>
 					<td>
-						<input id="tnf_footer_email" type="email" class="regular-text" name="<?php echo esc_attr(tnf_footer_settings_option_key()); ?>[disclaimer_email]" value="<?php echo esc_attr($opts['disclaimer_email']); ?>" />
+						<input id="tnf_footer_email" type="email" class="regular-text" name="<?php echo esc_attr(tnf_footer_settings_option_key()); ?>[disclaimer_email]" value="<?php echo esc_attr($opts['disclaimer_email']); ?>" placeholder="contact@tnftoday.com" autocomplete="email" />
+						<p class="description"><?php esc_html_e('Shown below the disclaimer on every page that uses the TNF footer. Leave empty and save to use contact@tnftoday.com.', 'tnf-news-platform'); ?></p>
 					</td>
 				</tr>
 				<tr>

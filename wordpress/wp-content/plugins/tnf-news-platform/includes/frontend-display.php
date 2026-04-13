@@ -12,6 +12,7 @@ if (! defined('ABSPATH')) {
 add_filter('the_content', 'tnf_prepend_pdf_report_viewer', 5);
 add_filter('the_content', 'tnf_prepend_video_embed', 9);
 add_filter('the_content', 'tnf_news_content_with_category_rail', 11);
+add_filter('the_content', 'tnf_video_single_append_related', 12);
 add_filter('render_block', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_filter('render_block_core/post-featured-image', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
@@ -236,40 +237,62 @@ function tnf_footer_content_type_links(): array {
 }
 
 /**
- * Eye icon SVG for views strip.
+ * Credits line for footer bar: replaces the word "Love" with an inline heart icon.
+ *
+ * @param string $credits_line Value from TNF Footer settings.
  */
-function tnf_footer_views_eye_svg(): string {
-	return '<svg class="tnf-footer-views__icon" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>';
+function tnf_footer_credits_line_html(string $credits_line): string {
+	$credits_line = trim($credits_line);
+	if ($credits_line === '') {
+		return '';
+	}
+
+	$heart = '<span class="tnf-footer-bar__heart" role="img" aria-label="' . esc_attr__('love', 'tnf-news-platform') . '">♥</span>';
+
+	if (! preg_match('/\bLove\b/i', $credits_line)) {
+		return esc_html($credits_line);
+	}
+
+	$parts = preg_split('/\bLove\b/i', $credits_line, -1);
+	$out   = '';
+	$n     = count($parts);
+	foreach ($parts as $i => $part) {
+		$out .= esc_html($part);
+		if ($i < $n - 1) {
+			$out .= $heart;
+		}
+	}
+
+	return wp_kses(
+		$out,
+		array(
+			'span' => array(
+				'class'      => true,
+				'role'       => true,
+				'aria-label' => true,
+			),
+		)
+	);
 }
 
 /**
- * Site footer (views + disclaimer + bar).
+ * Site footer (disclaimer + bar).
  *
  * @param bool $wrap_root_typography Add .tnf-home-news for typography hooks.
  */
 function tnf_render_site_footer_chrome(bool $wrap_root_typography = true): void {
 	$year  = (int) wp_date('Y');
-	$name  = get_bloginfo('name');
+	$name  = trim((string) get_bloginfo('name'));
+	if ($name === '') {
+		$name = 'TNF Today';
+	}
 	$root  = $wrap_root_typography ? 'tnf-site-footer tnf-home-news' : 'tnf-site-footer';
 	$opts  = function_exists('tnf_footer_get_settings') ? tnf_footer_get_settings() : array();
-	$show_v = ! empty($opts['show_views_bar']);
-	$views  = isset($opts['total_views']) ? (int) $opts['total_views'] : 0;
-	$views  = (int) apply_filters('tnf_footer_total_views', $views);
-	$disc   = isset($opts['disclaimer_text']) ? (string) $opts['disclaimer_text'] : '';
-	$email  = isset($opts['disclaimer_email']) ? (string) $opts['disclaimer_email'] : '';
-	$creds  = isset($opts['credits_line']) ? trim((string) $opts['credits_line']) : '';
+	$disc  = isset($opts['disclaimer_text']) ? (string) $opts['disclaimer_text'] : '';
+	$email = isset($opts['disclaimer_email']) ? (string) $opts['disclaimer_email'] : '';
+	$creds = isset($opts['credits_line']) ? trim((string) $opts['credits_line']) : '';
 	?>
 	<footer class="<?php echo esc_attr($root); ?>" role="contentinfo">
-		<?php if ($show_v) : ?>
-			<div class="tnf-footer-views">
-				<div class="tnf-shell tnf-footer-views__inner">
-					<?php echo tnf_footer_views_eye_svg(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed SVG ?>
-					<span class="tnf-footer-views__label"><?php esc_html_e('Total Views:', 'tnf-news-platform'); ?></span>
-					<span class="tnf-footer-views__count"><?php echo esc_html(number_format_i18n($views)); ?></span>
-				</div>
-			</div>
-		<?php endif; ?>
-
 		<div class="tnf-footer-disclaimer">
 			<div class="tnf-shell tnf-footer-disclaimer__inner">
 				<p class="tnf-footer-disclaimer__intro">
@@ -295,28 +318,37 @@ function tnf_render_site_footer_chrome(bool $wrap_root_typography = true): void 
 					<?php esc_html_e('All Rights Reserved', 'tnf-news-platform'); ?>
 					<?php if ($creds !== '') : ?>
 						<span class="tnf-footer-bar__sep" aria-hidden="true"> | </span>
-						<span class="tnf-footer-bar__credits"><?php echo esc_html($creds); ?></span>
+						<span class="tnf-footer-bar__credits"><?php echo tnf_footer_credits_line_html($creds); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in tnf_footer_credits_line_html ?></span>
 					<?php endif; ?>
 				</p>
 				<nav class="tnf-footer-bar__nav" aria-label="<?php esc_attr_e('Footer', 'tnf-news-platform'); ?>">
 					<?php
 					$fu_v = get_post_type_archive_link('tnf_video');
 					$fu_e = get_post_type_archive_link('tnf_pdf_report');
-					if (is_string($fu_v) && $fu_v !== '') :
-						?>
-					<a href="<?php echo esc_url($fu_v); ?>"><?php esc_html_e('Videos', 'tnf-news-platform'); ?></a>
-						<?php
-					endif;
-					if (is_string($fu_e) && $fu_e !== '') :
-						?>
-					<a href="<?php echo esc_url($fu_e); ?>"><?php esc_html_e('ePaper', 'tnf-news-platform'); ?></a>
-						<?php
-					endif;
+					$footer_nav = array();
+					if (is_string($fu_v) && $fu_v !== '') {
+						$footer_nav[] = array(
+							'url'   => $fu_v,
+							'label' => __('Videos', 'tnf-news-platform'),
+						);
+					}
+					if (is_string($fu_e) && $fu_e !== '') {
+						$footer_nav[] = array(
+							'url'   => $fu_e,
+							'label' => __('ePaper', 'tnf-news-platform'),
+						);
+					}
+					$footer_nav[] = array( 'url' => home_url('/about-us/'), 'label' => __('About Us', 'tnf-news-platform') );
+					$footer_nav[] = array( 'url' => home_url('/contact-us/'), 'label' => __('Contact Us', 'tnf-news-platform') );
+					$footer_nav[] = array( 'url' => home_url('/terms-of-use/'), 'label' => __('Terms of Use', 'tnf-news-platform') );
+					$footer_nav[] = array( 'url' => home_url('/privacy-policy/'), 'label' => __('Privacy Policy', 'tnf-news-platform') );
+					foreach ($footer_nav as $i => $item) {
+						if ($i > 0) {
+							echo '<span class="tnf-footer-bar__pipe" aria-hidden="true"> | </span>';
+						}
+						echo '<a href="' . esc_url($item['url']) . '">' . esc_html($item['label']) . '</a>';
+					}
 					?>
-					<a href="<?php echo esc_url(home_url('/about-us/')); ?>"><?php esc_html_e('About Us', 'tnf-news-platform'); ?></a>
-					<a href="<?php echo esc_url(home_url('/contact-us/')); ?>"><?php esc_html_e('Contact Us', 'tnf-news-platform'); ?></a>
-					<a href="<?php echo esc_url(home_url('/terms-of-use/')); ?>"><?php esc_html_e('Terms of Use', 'tnf-news-platform'); ?></a>
-					<a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php esc_html_e('Privacy Policy', 'tnf-news-platform'); ?></a>
 				</nav>
 				<button type="button" class="tnf-footer-backtop" aria-label="<?php esc_attr_e('Back to top', 'tnf-news-platform'); ?>" onclick="window.scrollTo({top:0,behavior:'smooth'})">
 					<span aria-hidden="true">^</span>
@@ -333,11 +365,13 @@ function tnf_render_site_footer_chrome(bool $wrap_root_typography = true): void 
  * @param bool $wrap_root_typography Add .tnf-home-news on wrapper.
  */
 function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void {
-	$login_url    = wp_login_url();
+	$login_url    = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/login/');
 	$register_url = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('register') : home_url('/register/');
 	$account_url  = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/');
 	$epaper_url   = get_post_type_archive_link('tnf_pdf_report');
 	$epaper_url   = is_string($epaper_url) && $epaper_url !== '' ? $epaper_url : home_url('/pdf-reports/');
+	$videos_url   = get_post_type_archive_link('tnf_video');
+	$videos_url   = is_string($videos_url) && $videos_url !== '' ? $videos_url : '';
 	$root_class   = $wrap_root_typography ? 'tnf-site-chrome tnf-home-news' : 'tnf-site-chrome';
 	$ticker_inner = tnf_news_breaking_ticker_inner_html();
 	?>
@@ -345,31 +379,50 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 		<div class="tnf-top-utility">
 			<div class="tnf-shell">
 				<div class="tnf-top-utility__left">
-					<?php if (is_user_logged_in()) : ?>
-						<a href="<?php echo esc_url($account_url); ?>"><?php esc_html_e('My Account', 'tnf-news-platform'); ?></a>
-						<a href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>"><?php esc_html_e('Logout', 'tnf-news-platform'); ?></a>
-					<?php else : ?>
-						<a href="<?php echo esc_url($login_url); ?>"><?php esc_html_e('Login', 'tnf-news-platform'); ?></a>
-						<a href="<?php echo esc_url($register_url); ?>"><?php esc_html_e('Register', 'tnf-news-platform'); ?></a>
+					<?php if ($videos_url !== '') : ?>
+						<a href="<?php echo esc_url($videos_url); ?>"><?php esc_html_e('Videos', 'tnf-news-platform'); ?></a>
 					<?php endif; ?>
+					<a href="<?php echo esc_url($epaper_url); ?>"><?php esc_html_e('ePaper', 'tnf-news-platform'); ?></a>
+					<a href="<?php echo esc_url(home_url('/about-us/')); ?>"><?php esc_html_e('About Us', 'tnf-news-platform'); ?></a>
+					<a href="<?php echo esc_url(home_url('/contact-us/')); ?>"><?php esc_html_e('Contact Us', 'tnf-news-platform'); ?></a>
+					<a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php esc_html_e('Privacy Policy', 'tnf-news-platform'); ?></a>
 				</div>
 				<div class="tnf-top-utility__right">
-					<span><?php echo esc_html(wp_date('l, F j, Y')); ?></span>
+					<span><?php echo esc_html(wp_date('l, d M Y')); ?></span>
 				</div>
 			</div>
 		</div>
 
-		<div class="tnf-masthead">
+		<header class="tnf-masthead">
 			<div class="tnf-shell tnf-masthead-inner">
-				<div class="tnf-brand">
-					<a href="<?php echo esc_url(home_url('/')); ?>"><?php echo esc_html(get_bloginfo('name', 'display')); ?></a>
+				<div class="tnf-logo-wrap">
+					<?php if (function_exists('has_custom_logo') && has_custom_logo()) : ?>
+						<div class="tnf-logo-image"><?php the_custom_logo(); ?></div>
+					<?php endif; ?>
+					<div class="tnf-brand"><?php echo esc_html(get_bloginfo('name', 'display')); ?></div>
+					<?php
+					$masthead_tagline = '';
+					if (function_exists('get_theme_mod')) {
+						$masthead_tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
+					}
+					if ($masthead_tagline !== '') :
+						?>
+					<div class="tnf-meta"><?php echo esc_html($masthead_tagline); ?></div>
+					<?php endif; ?>
 				</div>
-				<div class="tnf-masthead-meta">
-					<?php echo esc_html(get_bloginfo('description', 'display')); ?>
+				<div class="tnf-head-ad" aria-hidden="true">
+					<span><?php esc_html_e('Top Banner Space', 'tnf-news-platform'); ?></span>
 				</div>
-				<div class="tnf-head-ad" aria-hidden="true"><?php esc_html_e('Advertisement', 'tnf-news-platform'); ?></div>
+				<div class="tnf-account-wrap">
+					<?php if (is_user_logged_in()) : ?>
+						<a class="tnf-auth-nav-btn" href="<?php echo esc_url($account_url); ?>"><?php esc_html_e('My Account', 'tnf-news-platform'); ?></a>
+					<?php else : ?>
+						<a class="tnf-auth-nav-btn" href="<?php echo esc_url($login_url); ?>"><?php esc_html_e('Login', 'tnf-news-platform'); ?></a>
+						<a class="tnf-auth-nav-btn tnf-auth-nav-btn--secondary" href="<?php echo esc_url($register_url); ?>"><?php esc_html_e('Register', 'tnf-news-platform'); ?></a>
+					<?php endif; ?>
+				</div>
 			</div>
-		</div>
+		</header>
 
 		<div class="tnf-top-nav">
 			<div class="tnf-shell">
@@ -780,6 +833,142 @@ function tnf_video_card_thumbnail_url(int $post_id): string {
 }
 
 /**
+ * Featured image URL for tnf_news cards (related, lists); deterministic placeholder if none.
+ */
+function tnf_news_post_thumbnail_url(int $post_id): string {
+	if ($post_id <= 0) {
+		return '';
+	}
+
+	$feat = get_the_post_thumbnail_url($post_id, 'medium_large');
+	if (is_string($feat) && $feat !== '') {
+		return $feat;
+	}
+
+	return 'https://picsum.photos/seed/tnf-news-' . $post_id . '/640/360';
+}
+
+/**
+ * Related post IDs for a single: same category first, then recent by date.
+ *
+ * @return array<int,int>
+ */
+function tnf_related_post_ids_for_single(int $post_id, string $post_type, int $limit = 4): array {
+	$post_id = (int) $post_id;
+	$limit   = max(1, min(12, $limit));
+	if ($post_id <= 0 || $post_type === '') {
+		return array();
+	}
+
+	$term_ids = array();
+	if (taxonomy_exists('category')) {
+		$terms = get_the_terms($post_id, 'category');
+		if (is_array($terms) && ! is_wp_error($terms)) {
+			foreach ($terms as $term) {
+				$term_ids[] = (int) $term->term_id;
+			}
+		}
+	}
+
+	$related_ids = array();
+	$exclude     = array($post_id);
+	$base_args   = array(
+		'post_type'           => $post_type,
+		'post_status'         => 'publish',
+		'ignore_sticky_posts' => true,
+		'orderby'             => 'date',
+		'order'               => 'DESC',
+		'no_found_rows'       => true,
+		'fields'              => 'ids',
+	);
+
+	if ($term_ids !== array()) {
+		$q_cat = new WP_Query(
+			array_merge(
+				$base_args,
+				array(
+					'posts_per_page' => $limit,
+					'post__not_in'   => $exclude,
+					'category__in'   => $term_ids,
+				)
+			)
+		);
+		$related_ids = array_map('intval', $q_cat->posts);
+	}
+
+	$exclude = array_merge($exclude, $related_ids);
+	if (count($related_ids) < $limit) {
+		$q_fill = new WP_Query(
+			array_merge(
+				$base_args,
+				array(
+					'posts_per_page' => $limit - count($related_ids),
+					'post__not_in'   => $exclude,
+				)
+			)
+		);
+		$related_ids = array_merge($related_ids, array_map('intval', $q_fill->posts));
+	}
+
+	return $related_ids;
+}
+
+/**
+ * Video single: related videos below content (same grid styles as news).
+ *
+ * @param string $content Post content.
+ */
+function tnf_video_single_append_related(string $content): string {
+	if (! is_singular('tnf_video') || ! in_the_loop() || ! is_main_query()) {
+		return $content;
+	}
+
+	$post_id = get_the_ID();
+	if (! $post_id) {
+		return $content;
+	}
+
+	$related_ids = tnf_related_post_ids_for_single($post_id, 'tnf_video', 4);
+	if ($related_ids === array()) {
+		return $content;
+	}
+
+	$html  = '<section class="tnf-news-related tnf-video-related" aria-label="' . esc_attr__('Related videos', 'tnf-news-platform') . '">';
+	$html .= '<h3 class="tnf-news-related__title">' . esc_html__('Related Videos', 'tnf-news-platform') . '</h3>';
+	$html .= '<div class="tnf-news-related-grid">';
+	foreach ($related_ids as $rid) {
+		$rid = (int) $rid;
+		if ($rid <= 0) {
+			continue;
+		}
+		$thumb = tnf_video_card_thumbnail_url($rid);
+		if ($thumb === '') {
+			$thumb = 'https://picsum.photos/seed/tnf-video-' . $rid . '/640/360';
+		}
+		$rel_terms = get_the_terms($rid, 'category');
+		$rel_cat   = '';
+		if (is_array($rel_terms) && ! is_wp_error($rel_terms) && isset($rel_terms[0])) {
+			$rel_cat = (string) $rel_terms[0]->name;
+		}
+		$rel_title = get_the_title($rid);
+		$html .= '<article class="tnf-news-related-card">';
+		$html .= '<a class="tnf-news-related-card__thumb" href="' . esc_url(get_permalink($rid)) . '">';
+		$html .= '<img src="' . esc_url($thumb) . '" alt="' . esc_attr($rel_title) . '" loading="lazy" decoding="async" />';
+		$html .= '</a>';
+		$html .= '<div class="tnf-news-related-card__body">';
+		if ($rel_cat !== '') {
+			$html .= '<span class="tnf-news-related-card__cat">' . esc_html($rel_cat) . '</span>';
+		}
+		$html .= '<h4><a href="' . esc_url(get_permalink($rid)) . '">' . esc_html($rel_title) . '</a></h4>';
+		$html .= '<time datetime="' . esc_attr(get_the_date(DATE_W3C, $rid)) . '">' . esc_html(get_the_date('', $rid)) . '</time>';
+		$html .= '</div></article>';
+	}
+	$html .= '</div></section>';
+
+	return $content . $html;
+}
+
+/**
  * First page image URL from PDF worker manifest (presigned; may expire).
  */
 function tnf_pdf_report_first_page_thumbnail_url(int $post_id): string {
@@ -958,6 +1147,19 @@ function tnf_render_block_post_featured_image_tnf_cpts(string $block_content, ar
 
 	$type = get_post_type($post_id);
 	if ($type === 'tnf_video') {
+		if (
+			! is_admin()
+			&& is_singular('tnf_video')
+			&& (int) get_queried_object_id() === $post_id
+		) {
+			$embed_url = (string) get_post_meta($post_id, 'tnf_embed_url', true);
+			if ($embed_url !== '') {
+				$embed_chk = wp_oembed_get($embed_url, array( 'width' => 1280 ));
+				if ($embed_chk && is_string($embed_chk)) {
+					return '';
+				}
+			}
+		}
 		if (has_post_thumbnail($post_id)) {
 			return $block_content;
 		}
@@ -987,7 +1189,31 @@ function tnf_render_block_post_featured_image_tnf_cpts(string $block_content, ar
 }
 
 /**
- * News single: category rail, related, share bar.
+ * Inline SVG icons for news single share bar (decorative; links carry aria-label).
+ *
+ * @param string $id One of share, fb, wa, li, x, link.
+ */
+function tnf_news_single_share_icon_svg(string $id): string {
+	switch ($id) {
+		case 'share':
+			return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.26.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/></svg>';
+		case 'fb':
+			return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M24 12.073C24 5.446 18.627 0 12 0S0 5.446 0 12.073c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>';
+		case 'wa':
+			return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.881 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>';
+		case 'li':
+			return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>';
+		case 'x':
+			return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>';
+		case 'link':
+			return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>';
+		default:
+			return '';
+	}
+}
+
+/**
+ * News single: meta, byline + share, related grid.
  *
  * @param string $content Post content.
  */
@@ -1001,8 +1227,7 @@ function tnf_news_content_with_category_rail(string $content): string {
 		return $content;
 	}
 
-	$terms = get_the_terms($post_id, 'category');
-	$items = '';
+	$terms       = get_the_terms($post_id, 'category');
 	$inline_cats = '';
 	if (is_array($terms) && ! is_wp_error($terms)) {
 		foreach ($terms as $term) {
@@ -1010,19 +1235,9 @@ function tnf_news_content_with_category_rail(string $content): string {
 			if (is_wp_error($link)) {
 				continue;
 			}
-			$items .= '<li><a href="' . esc_url((string) $link) . '">' . esc_html($term->name) . '</a></li>';
 			$inline_cats .= '<a href="' . esc_url((string) $link) . '">' . esc_html($term->name) . '</a> ';
 		}
 	}
-
-	if ($items === '') {
-		$items = '<li><span>' . esc_html__('Uncategorized', 'tnf-news-platform') . '</span></li>';
-	}
-
-	$rail  = '<aside class="tnf-news-meta-rail">';
-	$rail .= '<h4>' . esc_html__('Categories', 'tnf-news-platform') . '</h4>';
-	$rail .= '<ul>' . $items . '</ul>';
-	$rail .= '</aside>';
 
 	$meta  = '<div class="tnf-news-meta-head">';
 	$meta .= '<div class="tnf-news-meta-head__crumbs"><a href="' . esc_url(home_url('/')) . '">' . esc_html__('Home', 'tnf-news-platform') . '</a> <span>/</span> <span>' . esc_html__('News', 'tnf-news-platform') . '</span></div>';
@@ -1033,42 +1248,65 @@ function tnf_news_content_with_category_rail(string $content): string {
 	}
 	$meta .= '</div></div>';
 
-	$related_html = '';
-	$term_ids     = array();
-	if (is_array($terms) && ! is_wp_error($terms)) {
-		foreach ($terms as $term) {
-			$term_ids[] = (int) $term->term_id;
-		}
-	}
-
-	$related_q = new WP_Query(
-		array(
-			'post_type'           => 'tnf_news',
-			'post_status'         => 'publish',
-			'posts_per_page'      => 4,
-			'post__not_in'        => array((int) $post_id),
-			'ignore_sticky_posts' => true,
-			'category__in'        => $term_ids,
+	$author_id   = (int) get_post_field('post_author', $post_id);
+	$author_name = $author_id ? get_the_author_meta('display_name', $author_id) : '';
+	$author_url  = $author_id ? get_author_posts_url($author_id) : '';
+	$avatar_html = $author_id
+		? get_avatar(
+			$author_id,
+			96,
+			'',
+			$author_name !== '' ? $author_name : __('Author', 'tnf-news-platform'),
+			array(
+				'class' => 'tnf-news-byline__avatar-img',
+			)
 		)
-	);
+		: '';
 
-	if ($related_q->have_posts()) {
-		$related_html .= '<section class="tnf-news-related">';
-		$related_html .= '<h3>' . esc_html__('Related News', 'tnf-news-platform') . '</h3>';
+	$byline  = '<div class="tnf-news-byline">';
+	$byline .= '<span class="tnf-news-byline__label">' . esc_html__('News by', 'tnf-news-platform') . '</span>';
+	$byline .= '<span class="tnf-news-byline__avatar">' . $avatar_html . '</span>';
+	if ($author_name !== '' && $author_url !== '') {
+		$byline .= '<a class="tnf-news-byline__name" href="' . esc_url($author_url) . '">' . esc_html($author_name) . '</a>';
+	} elseif ($author_name !== '') {
+		$byline .= '<span class="tnf-news-byline__name">' . esc_html($author_name) . '</span>';
+	} else {
+		$byline .= '<span class="tnf-news-byline__name">' . esc_html__('Editorial', 'tnf-news-platform') . '</span>';
+	}
+	$byline .= '</div>';
+
+	$related_html = '';
+	$related_ids  = tnf_related_post_ids_for_single($post_id, 'tnf_news', 4);
+
+	if ($related_ids !== array()) {
+		$related_html .= '<section class="tnf-news-related" aria-label="' . esc_attr__('Related news', 'tnf-news-platform') . '">';
+		$related_html .= '<h3 class="tnf-news-related__title">' . esc_html__('Related News', 'tnf-news-platform') . '</h3>';
 		$related_html .= '<div class="tnf-news-related-grid">';
-		while ($related_q->have_posts()) {
-			$related_q->the_post();
-			$thumb = get_the_post_thumbnail_url(get_the_ID(), 'medium_large');
-			if (! is_string($thumb) || $thumb === '') {
-				$thumb = 'https://picsum.photos/seed/tnf-related-' . get_the_ID() . '/640/360';
+		foreach ($related_ids as $rid) {
+			$rid = (int) $rid;
+			if ($rid <= 0) {
+				continue;
 			}
+			$thumb     = tnf_news_post_thumbnail_url($rid);
+			$rel_terms = get_the_terms($rid, 'category');
+			$rel_cat   = '';
+			if (is_array($rel_terms) && ! is_wp_error($rel_terms) && isset($rel_terms[0])) {
+				$rel_cat = (string) $rel_terms[0]->name;
+			}
+			$rel_title = get_the_title($rid);
 			$related_html .= '<article class="tnf-news-related-card">';
-			$related_html .= '<a class="tnf-news-related-card__thumb" href="' . esc_url(get_permalink()) . '"><img src="' . esc_url($thumb) . '" alt="' . esc_attr(get_the_title()) . '" loading="lazy" /></a>';
-			$related_html .= '<h4><a href="' . esc_url(get_permalink()) . '">' . esc_html(get_the_title()) . '</a></h4>';
-			$related_html .= '</article>';
+			$related_html .= '<a class="tnf-news-related-card__thumb" href="' . esc_url(get_permalink($rid)) . '">';
+			$related_html .= '<img src="' . esc_url($thumb) . '" alt="' . esc_attr($rel_title) . '" loading="lazy" decoding="async" />';
+			$related_html .= '</a>';
+			$related_html .= '<div class="tnf-news-related-card__body">';
+			if ($rel_cat !== '') {
+				$related_html .= '<span class="tnf-news-related-card__cat">' . esc_html($rel_cat) . '</span>';
+			}
+			$related_html .= '<h4><a href="' . esc_url(get_permalink($rid)) . '">' . esc_html($rel_title) . '</a></h4>';
+			$related_html .= '<time datetime="' . esc_attr(get_the_date(DATE_W3C, $rid)) . '">' . esc_html(get_the_date('', $rid)) . '</time>';
+			$related_html .= '</div></article>';
 		}
 		$related_html .= '</div></section>';
-		wp_reset_postdata();
 	}
 
 	$permalink     = get_permalink($post_id);
@@ -1076,16 +1314,24 @@ function tnf_news_content_with_category_rail(string $content): string {
 	$encoded_url   = rawurlencode((string) $permalink);
 	$encoded_title = rawurlencode((string) $title);
 
-	$share  = '<div class="tnf-share-bar" data-share-url="' . esc_attr((string) $permalink) . '">';
-	$share .= '<a class="tnf-share-btn is-wa" href="https://wa.me/?text=' . $encoded_title . '%20' . $encoded_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on WhatsApp', 'tnf-news-platform') . '">WA</a>';
-	$share .= '<a class="tnf-share-btn is-fb" href="https://www.facebook.com/sharer/sharer.php?u=' . $encoded_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on Facebook', 'tnf-news-platform') . '">FB</a>';
-	$share .= '<a class="tnf-share-btn is-x" href="https://twitter.com/intent/tweet?url=' . $encoded_url . '&text=' . $encoded_title . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on X', 'tnf-news-platform') . '">X</a>';
-	$share .= '<button type="button" class="tnf-share-btn is-copy" data-copy-link="' . esc_attr((string) $permalink) . '">' . esc_html__('Copy', 'tnf-news-platform') . '</button>';
-	$share .= '</div>';
+	$share  = '<div class="tnf-share-bar" data-share-url="' . esc_attr((string) $permalink) . '" role="group" aria-label="' . esc_attr__('Share this article', 'tnf-news-platform') . '">';
+	$share .= '<span class="tnf-share-bar__lead" aria-hidden="true">' . tnf_news_single_share_icon_svg('share') . '</span>';
+	$share .= '<div class="tnf-share-bar__buttons">';
+	$share .= '<a class="tnf-share-btn is-fb" href="https://www.facebook.com/sharer/sharer.php?u=' . $encoded_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on Facebook', 'tnf-news-platform') . '">' . tnf_news_single_share_icon_svg('fb') . '</a>';
+	$share .= '<a class="tnf-share-btn is-wa" href="https://wa.me/?text=' . $encoded_title . '%20' . $encoded_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on WhatsApp', 'tnf-news-platform') . '">' . tnf_news_single_share_icon_svg('wa') . '</a>';
+	$share .= '<a class="tnf-share-btn is-li" href="https://www.linkedin.com/sharing/share-offsite/?url=' . $encoded_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on LinkedIn', 'tnf-news-platform') . '">' . tnf_news_single_share_icon_svg('li') . '</a>';
+	$share .= '<a class="tnf-share-btn is-x" href="https://twitter.com/intent/tweet?url=' . $encoded_url . '&text=' . $encoded_title . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on X', 'tnf-news-platform') . '">' . tnf_news_single_share_icon_svg('x') . '</a>';
+	$share .= '<button type="button" class="tnf-share-btn is-copy" data-copy-link="' . esc_attr((string) $permalink) . '" aria-label="' . esc_attr__('Copy link', 'tnf-news-platform') . '">';
+	$share .= '<span class="tnf-share-btn__icon" aria-hidden="true">' . tnf_news_single_share_icon_svg('link') . '</span>';
+	$share .= '<span class="tnf-sr-only tnf-share-btn__text">' . esc_html__('Copy link', 'tnf-news-platform') . '</span>';
+	$share .= '</button>';
+	$share .= '</div></div>';
 
-	$copy_js = '<script>(function(){var b=document.querySelector(".tnf-share-btn.is-copy");if(!b){return;}b.addEventListener("click",function(){var u=b.getAttribute("data-copy-link")||"";if(!u){return;}if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(function(){b.textContent="Copied";setTimeout(function(){b.textContent="Copy";},1600);});}else{var t=document.createElement("textarea");t.value=u;document.body.appendChild(t);t.select();try{document.execCommand("copy");b.textContent="Copied";setTimeout(function(){b.textContent="Copy";},1600);}catch(e){}document.body.removeChild(t);}});})();</script>';
+	$copy_js = '<script>(function(){var root=document.querySelector(".tnf-news-content-body");if(!root){return;}var b=root.querySelector(".tnf-share-btn.is-copy");if(!b){return;}var label=b.querySelector(".tnf-share-btn__text");var orig=label?label.textContent:"";b.addEventListener("click",function(){var u=b.getAttribute("data-copy-link")||"";if(!u){return;}var done=function(){b.classList.add("is-copied");if(label){label.textContent="' . esc_js(__('Copied', 'tnf-news-platform')) . '";}setTimeout(function(){b.classList.remove("is-copied");if(label){label.textContent=orig;}},1800);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(u).then(done);}else{var t=document.createElement("textarea");t.value=u;document.body.appendChild(t);t.select();try{document.execCommand("copy");done();}catch(e){}document.body.removeChild(t);}});})();</script>';
 
-	return $share . '<div class="tnf-news-content-layout">' . $rail . '<div class="tnf-news-content-body">' . $meta . $content . $related_html . '</div></div>' . $copy_js;
+	$byline_share = '<div class="tnf-news-byline-share">' . $byline . $share . '</div>';
+
+	return '<div class="tnf-news-content-layout"><div class="tnf-news-content-body">' . $meta . $byline_share . $content . $related_html . '</div></div>' . $copy_js;
 }
 
 /**

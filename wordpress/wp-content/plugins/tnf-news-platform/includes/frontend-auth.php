@@ -23,11 +23,54 @@ function tnf_register_frontend_auth(): void {
 	add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_auth_styles', 25);
 	add_action('template_redirect', 'tnf_auth_protect_restricted_pdf_pages', 11);
 	add_action('template_redirect', 'tnf_auth_handle_missing_auth_slug', 12);
+	add_action('login_init', 'tnf_auth_redirect_wp_login_to_frontend', 1);
 	add_action('login_enqueue_scripts', 'tnf_auth_enqueue_wp_login_styles');
 	add_filter('login_redirect', 'tnf_auth_login_redirect_by_role', 10, 3);
 	add_action('admin_init', 'tnf_auth_block_wp_admin_for_members');
 	add_filter('show_admin_bar', 'tnf_auth_hide_admin_bar_for_members');
 	add_filter('body_class', 'tnf_auth_body_class');
+}
+
+/**
+ * Redirect wp-login.php UI to branded frontend auth pages.
+ */
+function tnf_auth_redirect_wp_login_to_frontend(): void {
+	if (is_user_logged_in()) {
+		return;
+	}
+
+	$method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
+	if ($method !== 'GET') {
+		return;
+	}
+
+	$action = isset($_REQUEST['action']) ? sanitize_key((string) wp_unslash($_REQUEST['action'])) : 'login';
+	$target = '';
+
+	if ($action === 'lostpassword' || $action === 'retrievepassword' || $action === 'rp' || $action === 'resetpass') {
+		$target = tnf_auth_page_url('forgot-password');
+	} elseif ($action === 'register') {
+		$target = tnf_auth_page_url('register');
+	} elseif ($action === 'login' || $action === '') {
+		$target = tnf_auth_page_url('login');
+	}
+
+	if ($target === '') {
+		return;
+	}
+
+	$redirect_to = isset($_REQUEST['redirect_to']) ? rawurldecode((string) wp_unslash($_REQUEST['redirect_to'])) : '';
+	if ($redirect_to !== '') {
+		$target = add_query_arg(
+			array(
+				'redirect_to' => rawurlencode(esc_url_raw($redirect_to)),
+			),
+			$target
+		);
+	}
+
+	wp_safe_redirect($target, 302);
+	exit;
 }
 
 /**

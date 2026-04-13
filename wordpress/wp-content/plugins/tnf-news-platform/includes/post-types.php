@@ -90,6 +90,9 @@ function tnf_register_post_types(): void {
 		)
 	);
 
+	register_taxonomy_for_object_type('category', 'tnf_video');
+	register_taxonomy_for_object_type('post_tag', 'tnf_video');
+
 	register_post_type(
 		'tnf_user_submission',
 		array(
