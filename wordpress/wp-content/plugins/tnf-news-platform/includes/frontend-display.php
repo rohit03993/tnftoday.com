@@ -185,6 +185,11 @@ add_action('init', 'tnf_register_site_chrome_shortcodes', 5);
  * @param array<string,string> $atts Attributes.
  */
 function tnf_sc_site_header($atts = array()): string {
+	static $rendered = false;
+	if ($rendered) {
+		return '';
+	}
+	$rendered = true;
 	ob_start();
 	tnf_render_site_header_chrome();
 	return (string) ob_get_clean();
