@@ -1,0 +1,14 @@
+.env
+.env.local
+**/node_modules/
+**/.next/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.DS_Store
+public/sw.js*
+public/workbox-*.js*
+public/swe-worker-*.js
