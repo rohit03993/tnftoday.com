@@ -370,6 +370,12 @@ function tnf_render_site_footer_chrome(bool $wrap_root_typography = true): void 
  * @param bool $wrap_root_typography Add .tnf-home-news on wrapper.
  */
 function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void {
+	static $rendered = false;
+	if ($rendered) {
+		return;
+	}
+	$rendered = true;
+
 	$login_url    = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/login/');
 	$register_url = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('register') : home_url('/register/');
 	$account_url  = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/');

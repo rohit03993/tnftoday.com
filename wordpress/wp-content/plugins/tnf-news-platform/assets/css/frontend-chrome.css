@@ -13,6 +13,16 @@
 	color: #111;
 }
 
+/* Second header block (Site Editor duplicate template part or cached HTML): hide extras. */
+.tnf-site-chrome.tnf-home-news ~ .tnf-site-chrome.tnf-home-news {
+	display: none !important;
+}
+
+.wp-block-template-part:has(.tnf-site-chrome.tnf-home-news)
+	~ .wp-block-template-part:has(.tnf-site-chrome.tnf-home-news) {
+	display: none !important;
+}
+
 .tnf-top-utility {
 	background: #090909;
 	color: #fff;

@@ -56,7 +56,20 @@
 		});
 	}
 
+	function hideDuplicateHeaderChrome() {
+		var nodes = document.querySelectorAll('.tnf-site-chrome.tnf-home-news');
+		if (nodes.length < 2) {
+			return;
+		}
+		for (var i = 1; i < nodes.length; i++) {
+			var wrap = nodes[i].closest('.wp-block-template-part');
+			var hide = wrap || nodes[i];
+			hide.style.setProperty('display', 'none', 'important');
+		}
+	}
+
 	document.addEventListener('DOMContentLoaded', function () {
+		hideDuplicateHeaderChrome();
 		document.querySelectorAll('.tnf-top-nav').forEach(initMobileMenu);
 	});
 })();
