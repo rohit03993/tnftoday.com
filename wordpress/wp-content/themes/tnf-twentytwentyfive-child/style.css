@@ -1,0 +1,13 @@
+/*
+Theme Name: TNF Twenty Twenty-Five Child
+Theme URI: https://example.com
+Description: TNF news layouts, grids, and chrome. Use this theme so updates to Twenty Twenty-Five do not replace your templates. Activate this instead of Twenty Twenty-Five directly.
+Author: TNF
+Template: twentytwentyfive
+Version: 1.0.0
+Text Domain: tnf-twentytwentyfive-child
+Requires at least: 6.4
+Tested up to: 6.8
+*/
+
+/* Base styles come from parent + tnf-home-news.css (enqueued in functions.php). */

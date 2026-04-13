@@ -1,0 +1,149 @@
+/**
+ * TNF news / video singles: layout, embed, share rail.
+ */
+
+.tnf-video-embed {
+	margin-bottom: 1.25rem;
+}
+
+.tnf-video-embed iframe {
+	width: 100%;
+	max-width: 100%;
+	aspect-ratio: 16 / 9;
+	height: auto;
+	min-height: 240px;
+}
+
+.single-tnf_video .entry-title,
+.single-tnf_pdf_report .entry-title,
+.single-tnf_news .entry-title {
+	margin-bottom: 0.5rem;
+}
+
+.tnf-news-content-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 200px) minmax(0, 1fr);
+	gap: 1.5rem;
+	align-items: start;
+}
+
+@media (max-width: 782px) {
+	.tnf-news-content-layout {
+		grid-template-columns: 1fr;
+	}
+}
+
+.tnf-news-meta-rail {
+	font-size: 0.9rem;
+	border: 1px solid #e8e8e8;
+	border-radius: 8px;
+	padding: 0.75rem 1rem;
+	background: #fafafa;
+}
+
+.tnf-news-meta-rail h4 {
+	margin: 0 0 0.5rem;
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: #666;
+}
+
+.tnf-news-meta-rail ul {
+	margin: 0;
+	padding-left: 1.1rem;
+}
+
+.tnf-news-meta-head {
+	margin-bottom: 1rem;
+	font-size: 0.9rem;
+	color: #555;
+}
+
+.tnf-news-meta-head__crumbs a {
+	text-decoration: none;
+}
+
+.tnf-news-meta-head__row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem 1rem;
+	margin-top: 0.35rem;
+}
+
+.tnf-news-related {
+	margin-top: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid #eee;
+}
+
+.tnf-news-related h3 {
+	margin: 0 0 1rem;
+	font-size: 1.1rem;
+}
+
+.tnf-news-related-grid {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+@media (max-width: 900px) {
+	.tnf-news-related-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.tnf-news-related-card__thumb img {
+	width: 100%;
+	height: auto;
+	display: block;
+	border-radius: 6px;
+}
+
+.tnf-news-related-card h4 {
+	margin: 0.4rem 0 0;
+	font-size: 0.9rem;
+	line-height: 1.35;
+}
+
+.tnf-share-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 1rem;
+}
+
+.tnf-share-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 2.5rem;
+	padding: 0.35rem 0.65rem;
+	font-size: 0.75rem;
+	font-weight: 700;
+	text-decoration: none;
+	border-radius: 4px;
+	border: 1px solid #ccc;
+	background: #f5f5f5;
+	color: #111;
+	cursor: pointer;
+}
+
+.tnf-share-btn.is-wa {
+	background: #25d366;
+	border-color: #1ebe5a;
+	color: #fff;
+}
+
+.tnf-share-btn.is-fb {
+	background: #1877f2;
+	border-color: #166fe5;
+	color: #fff;
+}
+
+.tnf-share-btn.is-x {
+	background: #111;
+	border-color: #111;
+	color: #fff;
+}

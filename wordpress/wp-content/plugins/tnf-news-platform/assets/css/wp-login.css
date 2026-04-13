@@ -1,0 +1,11 @@
+/**
+ * Optional branding for wp-login.php (kept minimal; avoids 404 if enqueued).
+ */
+
+body.login {
+	background: #f4f4f4;
+}
+
+body.login h1 a {
+	background-size: contain;
+}

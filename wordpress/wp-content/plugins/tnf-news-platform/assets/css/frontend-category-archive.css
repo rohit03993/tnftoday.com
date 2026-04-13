@@ -1,0 +1,117 @@
+/**
+ * Archive grids using TNF block patterns (category / CPT).
+ */
+
+.tnf-category-query .tnf-cat-post-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1.25rem;
+}
+
+@media (max-width: 960px) {
+	.tnf-category-query .tnf-cat-post-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 560px) {
+	.tnf-category-query .tnf-cat-post-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.tnf-cat-card {
+	border-radius: 10px;
+	background: #fafafa;
+	overflow: hidden;
+	border: 1px solid #eee;
+}
+
+.tnf-cat-card .wp-block-post-featured-image img {
+	width: 100%;
+	height: auto;
+	display: block;
+	vertical-align: middle;
+}
+
+.tnf-cat-card .tnf-pdf-card-iframe-wrap {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.tnf-cat-card .tnf-pdf-card-iframe {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: 0;
+	background: #fff;
+	pointer-events: none;
+}
+
+.tnf-category-pagination .wp-block-query-pagination {
+	gap: 0.5rem;
+}
+
+/**
+ * Video & ePaper archive hub headers.
+ */
+.tnf-archive-hub-hero {
+	margin-bottom: 2rem;
+	padding: 1.75rem 1.5rem 1.5rem;
+	border-radius: 16px;
+	background: linear-gradient(145deg, #fafbfc 0%, #f0f1f4 100%);
+	border: 1px solid rgba(0, 0, 0, 0.06);
+	box-shadow: 0 8px 32px rgba(15, 15, 25, 0.06);
+}
+
+.tnf-epaper-archive .tnf-archive-hub-hero {
+	background: linear-gradient(145deg, #12121a 0%, #1e1e28 100%);
+	border-color: rgba(255, 255, 255, 0.08);
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+.tnf-epaper-archive .tnf-archive-hub-hero .tnf-archive-hub-hero__title,
+.tnf-epaper-archive .tnf-archive-hub-hero h1,
+.tnf-epaper-archive .tnf-archive-hub-hero .wp-block-query-title {
+	color: #fff;
+}
+
+.tnf-epaper-archive .tnf-archive-hub-hero__lead,
+.tnf-epaper-archive .tnf-archive-hub-hero .tnf-archive-hub-hero__lead {
+	color: rgba(255, 255, 255, 0.75) !important;
+}
+
+.tnf-videos-archive .tnf-archive-hub-hero {
+	border-left: 4px solid #c41e3a;
+}
+
+.tnf-epaper-archive .tnf-cat-card,
+.tnf-videos-archive .tnf-cat-card {
+	background: #fff;
+	border-radius: 12px;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+	transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.tnf-epaper-archive .tnf-cat-card:hover,
+.tnf-videos-archive .tnf-cat-card:hover {
+	box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+	transform: translateY(-2px);
+}
+
+@media (max-width: 900px) {
+	.tnf-archive-hub-hero {
+		margin-bottom: 1rem;
+		padding: 1rem 0.9rem;
+		border-radius: 12px;
+	}
+
+	.tnf-category-query .tnf-cat-post-grid {
+		gap: 0.8rem;
+	}
+
+	.tnf-cat-card {
+		border-radius: 12px;
+	}
+}
