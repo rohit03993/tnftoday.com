@@ -41,6 +41,7 @@ add_action('plugins_loaded', 'tnf_news_platform_bootstrap');
  */
 function tnf_news_platform_bootstrap(): void {
 	add_action('init', 'tnf_register_post_types', 0);
+	add_action('init', 'tnf_handle_frontend_auth_forms', 25);
 	add_action('init', 'tnf_register_roles', 5);
 	add_action('init', 'tnf_register_workflow_hooks', 8);
 	add_action('init', 'tnf_register_pdf_integration', 8);

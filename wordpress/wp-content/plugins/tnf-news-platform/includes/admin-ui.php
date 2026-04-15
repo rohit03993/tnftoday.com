@@ -21,6 +21,13 @@ function tnf_register_admin_ui(): void {
 	add_action('admin_menu', 'tnf_homepage_controls_menu');
 	add_action('admin_init', 'tnf_homepage_controls_register');
 	add_action('admin_init', 'tnf_maybe_purge_fse_custom_templates');
+	add_filter('post_row_actions', 'tnf_user_submission_row_actions', 10, 2);
+	add_action('admin_post_tnf_approve_submission', 'tnf_admin_post_approve_user_submission');
+	add_action('admin_post_tnf_reject_submission', 'tnf_admin_post_reject_user_submission');
+	add_action('admin_notices', 'tnf_user_submission_moderation_admin_notices');
+	add_action('add_meta_boxes_tnf_user_submission', 'tnf_user_submission_register_moderation_metabox');
+	add_action('add_meta_boxes_tnf_news', 'tnf_news_embed_meta_boxes');
+	add_action('save_post_tnf_news', 'tnf_save_news_embed_meta', 10, 2);
 }
 
 /**
@@ -282,6 +289,51 @@ function tnf_render_video_metabox(WP_Post $post): void {
 }
 
 /**
+ * News: optional embed URL (YouTube, etc.) for the single template.
+ */
+function tnf_news_embed_meta_boxes(): void {
+	add_meta_box(
+		'tnf_news_embed',
+		__('Video / embed URL (optional)', 'tnf-news-platform'),
+		'tnf_render_news_embed_metabox',
+		'tnf_news',
+		'normal',
+		'high'
+	);
+}
+
+/**
+ * @param WP_Post $post Post.
+ */
+function tnf_render_news_embed_metabox(WP_Post $post): void {
+	wp_nonce_field('tnf_news_embed_meta', 'tnf_news_embed_meta_nonce');
+	$url = (string) get_post_meta($post->ID, 'tnf_embed_url', true);
+	?>
+	<p>
+		<label><strong><?php esc_html_e('YouTube / Instagram / Facebook URL', 'tnf-news-platform'); ?></strong></label><br />
+		<input type="url" name="tnf_news_embed_url" value="<?php echo esc_attr($url); ?>" class="widefat" />
+	</p>
+	<?php
+}
+
+/**
+ * Save news embed meta.
+ *
+ * @param int     $post_id Post ID.
+ * @param WP_Post $post    Post.
+ */
+function tnf_save_news_embed_meta(int $post_id, WP_Post $post): void {
+	if (! isset($_POST['tnf_news_embed_meta_nonce']) || ! wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['tnf_news_embed_meta_nonce'])), 'tnf_news_embed_meta')) {
+		return;
+	}
+	if (! current_user_can('edit_post', $post_id)) {
+		return;
+	}
+	$url = isset($_POST['tnf_news_embed_url']) ? esc_url_raw(wp_unslash((string) $_POST['tnf_news_embed_url'])) : '';
+	update_post_meta($post_id, 'tnf_embed_url', $url);
+}
+
+/**
  * Save video meta.
  *
  * @param int     $post_id Post ID.
@@ -491,6 +543,268 @@ function tnf_render_homepage_controls_page(): void {
 		</form>
 	</div>
 	<?php
+}
+
+/**
+ * List-table and edit-screen actions for moderating user submissions.
+ *
+ * @param array<string,string> $actions Row actions.
+ * @param WP_Post              $post    Post object.
+ * @return array<string,string>
+ */
+function tnf_user_submission_row_actions(array $actions, WP_Post $post): array {
+	if ($post->post_type !== 'tnf_user_submission' || ! tnf_user_can_moderate_submissions()) {
+		return $actions;
+	}
+
+	$sid     = (int) $post->ID;
+	$news_id = (int) get_post_meta($sid, 'tnf_promoted_news_id', true);
+	$status  = (string) get_post_meta($sid, 'tnf_submission_status', true);
+
+	if ($news_id > 0 && get_post($news_id) instanceof WP_Post) {
+		$actions['tnf_view_news'] = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url(get_edit_post_link($news_id, 'raw')),
+			esc_html__('Edit published news', 'tnf-news-platform')
+		);
+		$view = get_permalink($news_id);
+		if (is_string($view) && $view !== '') {
+			$actions['tnf_view_news_front'] = sprintf(
+				'<a href="%s" target="_blank" rel="noopener noreferrer">%s</a>',
+				esc_url($view),
+				esc_html__('View on site', 'tnf-news-platform')
+			);
+		}
+		return $actions;
+	}
+
+	if ($status === 'rejected') {
+		return $actions;
+	}
+
+	$approve_url = wp_nonce_url(
+		admin_url('admin-post.php?action=tnf_approve_submission&post=' . $sid),
+		'tnf_approve_submission_' . $sid
+	);
+	$reject_url = wp_nonce_url(
+		admin_url('admin-post.php?action=tnf_reject_submission&post=' . $sid),
+		'tnf_reject_submission_' . $sid
+	);
+
+	$actions['tnf_approve'] = sprintf(
+		'<a href="%s">%s</a>',
+		esc_url($approve_url),
+		esc_html__('Approve & publish', 'tnf-news-platform')
+	);
+	$confirm                = esc_js(__('Reject this submission? It will be marked as rejected and returned to draft.', 'tnf-news-platform'));
+	$actions['tnf_reject'] = sprintf(
+		'<a href="%s" onclick="return confirm(\'%s\');">%s</a>',
+		esc_url($reject_url),
+		$confirm,
+		esc_html__('Reject', 'tnf-news-platform')
+	);
+
+	return $actions;
+}
+
+/**
+ * Approve handler (admin-post.php).
+ */
+function tnf_admin_post_approve_user_submission(): void {
+	if (! isset($_GET['post'])) {
+		wp_die(esc_html__('Missing submission.', 'tnf-news-platform'));
+	}
+	$id = absint((string) wp_unslash($_GET['post']));
+	if ($id <= 0) {
+		wp_die(esc_html__('Invalid submission.', 'tnf-news-platform'));
+	}
+	check_admin_referer('tnf_approve_submission_' . $id);
+
+	if (! tnf_user_can_moderate_submissions()) {
+		wp_die(esc_html__('You do not have permission to moderate submissions.', 'tnf-news-platform'), '', array('response' => 403));
+	}
+
+	$result = tnf_user_submission_approve($id);
+	if (is_wp_error($result)) {
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'post_type'      => 'tnf_user_submission',
+					'tnf_sub_error'  => rawurlencode($result->get_error_code()),
+				),
+				admin_url('edit.php')
+			)
+		);
+		exit;
+	}
+
+	wp_safe_redirect(
+		add_query_arg(
+			array(
+				'post'            => $result,
+				'action'          => 'edit',
+				'tnf_sub_approved' => '1',
+			),
+			admin_url('post.php')
+		)
+	);
+	exit;
+}
+
+/**
+ * Reject handler (admin-post.php).
+ */
+function tnf_admin_post_reject_user_submission(): void {
+	if (! isset($_GET['post'])) {
+		wp_die(esc_html__('Missing submission.', 'tnf-news-platform'));
+	}
+	$id = absint((string) wp_unslash($_GET['post']));
+	if ($id <= 0) {
+		wp_die(esc_html__('Invalid submission.', 'tnf-news-platform'));
+	}
+	check_admin_referer('tnf_reject_submission_' . $id);
+
+	if (! tnf_user_can_moderate_submissions()) {
+		wp_die(esc_html__('You do not have permission to moderate submissions.', 'tnf-news-platform'), '', array('response' => 403));
+	}
+
+	$result = tnf_user_submission_reject($id, '');
+	if (is_wp_error($result)) {
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'post_type'     => 'tnf_user_submission',
+					'tnf_sub_error' => rawurlencode($result->get_error_code()),
+				),
+				admin_url('edit.php')
+			)
+		);
+		exit;
+	}
+
+	wp_safe_redirect(
+		add_query_arg(
+			array(
+				'post_type'       => 'tnf_user_submission',
+				'tnf_sub_rejected' => '1',
+			),
+			admin_url('edit.php')
+		)
+	);
+	exit;
+}
+
+/**
+ * Feedback after approve / reject from the list table.
+ */
+function tnf_user_submission_moderation_admin_notices(): void {
+	if (! is_admin() || ! tnf_user_can_moderate_submissions()) {
+		return;
+	}
+
+	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
+	if (! $screen) {
+		return;
+	}
+
+	if ($screen->id === 'edit-tnf_user_submission') {
+		if (isset($_GET['tnf_sub_rejected'])) {
+			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Submission rejected.', 'tnf-news-platform') . '</p></div>';
+		}
+
+		if (isset($_GET['tnf_sub_error'])) {
+			$code = sanitize_key((string) wp_unslash($_GET['tnf_sub_error']));
+			$msg  = $code === 'cannot_reject'
+				? __('That submission cannot be rejected.', 'tnf-news-platform')
+				: ($code === 'already_approved'
+					? __('That submission was already published.', 'tnf-news-platform')
+					: __('Something went wrong.', 'tnf-news-platform'));
+			echo '<div class="notice notice-error is-dismissible"><p>' . esc_html($msg) . '</p></div>';
+		}
+	}
+
+	if ($screen->base === 'post' && $screen->post_type === 'tnf_news' && isset($_GET['tnf_sub_approved'])) {
+		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('News article created from a user submission. Review categories and featured image before sharing.', 'tnf-news-platform') . '</p></div>';
+	}
+}
+
+/**
+ * Metabox: quick moderation links on the submission edit screen.
+ */
+function tnf_user_submission_register_moderation_metabox(): void {
+	add_meta_box(
+		'tnf_submission_moderate',
+		__('Editorial review', 'tnf-news-platform'),
+		'tnf_render_user_submission_moderate_metabox',
+		'tnf_user_submission',
+		'side',
+		'high'
+	);
+}
+
+/**
+ * @param WP_Post $post Post object.
+ */
+function tnf_render_user_submission_moderate_metabox(WP_Post $post): void {
+	if (! tnf_user_can_moderate_submissions()) {
+		echo '<p>' . esc_html__('You do not have permission to moderate submissions.', 'tnf-news-platform') . '</p>';
+		return;
+	}
+
+	$news_id = (int) get_post_meta($post->ID, 'tnf_promoted_news_id', true);
+	$status  = (string) get_post_meta($post->ID, 'tnf_submission_status', true);
+
+	if ($news_id > 0 && get_post($news_id) instanceof WP_Post) {
+		echo '<p>' . esc_html__('This submission was published as a news article.', 'tnf-news-platform') . '</p>';
+		printf(
+			'<p><a class="button button-primary" href="%s">%s</a></p>',
+			esc_url(get_edit_post_link($news_id, '')),
+			esc_html__('Edit news article', 'tnf-news-platform')
+		);
+		$view = get_permalink($news_id);
+		if (is_string($view) && $view !== '') {
+			printf(
+				'<p><a class="button" href="%s" target="_blank" rel="noopener noreferrer">%s</a></p>',
+				esc_url($view),
+				esc_html__('View on site', 'tnf-news-platform')
+			);
+		}
+		return;
+	}
+
+	if ($status === 'rejected') {
+		$reason = (string) get_post_meta($post->ID, 'tnf_rejection_reason', true);
+		echo '<p>' . esc_html__('This submission was rejected.', 'tnf-news-platform') . '</p>';
+		if ($reason !== '') {
+			echo '<p><strong>' . esc_html__('Note:', 'tnf-news-platform') . '</strong> ' . esc_html($reason) . '</p>';
+		}
+		return;
+	}
+
+	$approve_url = wp_nonce_url(
+		admin_url('admin-post.php?action=tnf_approve_submission&post=' . (int) $post->ID),
+		'tnf_approve_submission_' . (int) $post->ID
+	);
+	$reject_url = wp_nonce_url(
+		admin_url('admin-post.php?action=tnf_reject_submission&post=' . (int) $post->ID),
+		'tnf_reject_submission_' . (int) $post->ID
+	);
+	$confirm = esc_js(__('Reject this submission?', 'tnf-news-platform'));
+
+	echo '<p>';
+	printf(
+		'<a class="button button-primary" href="%s">%s</a> ',
+		esc_url($approve_url),
+		esc_html__('Approve & publish', 'tnf-news-platform')
+	);
+	printf(
+		'<a class="button" href="%s" onclick="return confirm(\'%s\');">%s</a>',
+		esc_url($reject_url),
+		$confirm,
+		esc_html__('Reject', 'tnf-news-platform')
+	);
+	echo '</p>';
+	echo '<p class="description">' . esc_html__('Approve creates a published News post from this content and archives the submission.', 'tnf-news-platform') . '</p>';
 }
 
 /**

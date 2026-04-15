@@ -10,6 +10,7 @@ if (! defined('ABSPATH')) {
 }
 
 add_filter('the_content', 'tnf_prepend_pdf_report_viewer', 5);
+add_filter('the_content', 'tnf_prepend_news_embed', 8);
 add_filter('the_content', 'tnf_prepend_video_embed', 9);
 add_filter('the_content', 'tnf_news_content_with_category_rail', 11);
 add_filter('the_content', 'tnf_video_single_append_related', 12);
@@ -777,6 +778,29 @@ function tnf_prepend_pdf_report_viewer(string $content): string {
 }
 
 /**
+ * News single: optional oEmbed from video URL meta (same key as Videos).
+ *
+ * @param string $content Post content.
+ */
+function tnf_prepend_news_embed(string $content): string {
+	if (! is_singular('tnf_news')) {
+		return $content;
+	}
+
+	$url = (string) get_post_meta(get_the_ID(), 'tnf_embed_url', true);
+	if ($url === '') {
+		return $content;
+	}
+
+	$embed = wp_oembed_get($url, array( 'width' => 1280 ));
+	if (! $embed || ! is_string($embed)) {
+		return $content;
+	}
+
+	return '<div class="tnf-news-embed tnf-video-embed wp-block-embed is-type-video">' . $embed . '</div>' . $content;
+}
+
+/**
  * Video single: oEmbed from metabox URL.
  *
  * @param string $content Post content.
@@ -854,6 +878,12 @@ function tnf_news_post_thumbnail_url(int $post_id): string {
 	$feat = get_the_post_thumbnail_url($post_id, 'medium_large');
 	if (is_string($feat) && $feat !== '') {
 		return $feat;
+	}
+
+	$embed = (string) get_post_meta($post_id, 'tnf_embed_url', true);
+	$yt    = tnf_youtube_id_from_url($embed);
+	if ($yt !== '') {
+		return 'https://i.ytimg.com/vi/' . $yt . '/hqdefault.jpg';
 	}
 
 	return 'https://picsum.photos/seed/tnf-news-' . $post_id . '/640/360';
@@ -1180,6 +1210,22 @@ function tnf_render_block_post_featured_image_tnf_cpts(string $block_content, ar
 		}
 
 		return tnf_post_featured_image_figure_html($post_id, $block, $thumb);
+	}
+
+	if ($type === 'tnf_news') {
+		if (
+			! is_admin()
+			&& is_singular('tnf_news')
+			&& (int) get_queried_object_id() === $post_id
+		) {
+			$embed_url = (string) get_post_meta($post_id, 'tnf_embed_url', true);
+			if ($embed_url !== '') {
+				$embed_chk = wp_oembed_get($embed_url, array( 'width' => 1280 ));
+				if ($embed_chk && is_string($embed_chk)) {
+					return '';
+				}
+			}
+		}
 	}
 
 	if ($type === 'tnf_pdf_report') {

@@ -18,9 +18,9 @@ function tnf_register_frontend_auth(): void {
 	add_shortcode('tnf_forgot_password_form', 'tnf_sc_forgot_password_form');
 	add_shortcode('tnf_account_box', 'tnf_sc_account_box');
 	add_shortcode('tnf_logout_link', 'tnf_sc_logout_link');
-	add_action('init', 'tnf_handle_frontend_auth_forms');
 	add_action('init', 'tnf_ensure_auth_pages');
 	add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_auth_styles', 25);
+	add_action('template_redirect', 'tnf_auth_redirect_guest_from_my_account', 10);
 	add_action('template_redirect', 'tnf_auth_protect_restricted_pdf_pages', 11);
 	add_action('template_redirect', 'tnf_auth_handle_missing_auth_slug', 12);
 	add_action('login_init', 'tnf_auth_redirect_wp_login_to_frontend', 1);
@@ -29,6 +29,23 @@ function tnf_register_frontend_auth(): void {
 	add_action('admin_init', 'tnf_auth_block_wp_admin_for_members');
 	add_filter('show_admin_bar', 'tnf_auth_hide_admin_bar_for_members');
 	add_filter('body_class', 'tnf_auth_body_class');
+}
+
+/**
+ * True when URL targets the core wp-login.php script (any action).
+ *
+ * Used to avoid redirect loops: fallbacks in tnf_auth_page_url() point here when
+ * frontend pages are missing, so we must not redirect wp-login GET to itself.
+ *
+ * @param string $url Full URL.
+ */
+function tnf_auth_target_is_wp_login_screen(string $url): bool {
+	$path = (string) wp_parse_url($url, PHP_URL_PATH);
+	if ($path === '') {
+		return false;
+	}
+
+	return strcasecmp(basename($path), 'wp-login.php') === 0;
 }
 
 /**
@@ -55,18 +72,14 @@ function tnf_auth_redirect_wp_login_to_frontend(): void {
 		$target = tnf_auth_page_url('login');
 	}
 
-	if ($target === '') {
+	if ($target === '' || tnf_auth_target_is_wp_login_screen($target)) {
 		return;
 	}
 
 	$redirect_to = isset($_REQUEST['redirect_to']) ? rawurldecode((string) wp_unslash($_REQUEST['redirect_to'])) : '';
+	$redirect_to = $redirect_to !== '' ? esc_url_raw($redirect_to) : '';
 	if ($redirect_to !== '') {
-		$target = add_query_arg(
-			array(
-				'redirect_to' => rawurlencode(esc_url_raw($redirect_to)),
-			),
-			$target
-		);
+		$target = add_query_arg('redirect_to', $redirect_to, $target);
 	}
 
 	wp_safe_redirect($target, 302);
@@ -91,6 +104,56 @@ function tnf_auth_status_url(string $status, string $msg): string {
 }
 
 /**
+ * Status URL always on the Login page (so notices render with the shortcode).
+ *
+ * @param string $status Status key.
+ * @param string $msg    Message key.
+ */
+function tnf_auth_login_page_status_url(string $status, string $msg): string {
+	return add_query_arg(
+		array(
+			'tnf_auth_status' => $status,
+			'tnf_auth_msg'    => $msg,
+		),
+		tnf_auth_page_url('login')
+	);
+}
+
+/**
+ * Status URL on My Account (not referer-based — submit flows must show notices on the profile page).
+ *
+ * @param string $status Status key.
+ * @param string $msg    Message key.
+ */
+function tnf_auth_my_account_status_url(string $status, string $msg): string {
+	return add_query_arg(
+		array(
+			'tnf_auth_status' => $status,
+			'tnf_auth_msg'    => $msg,
+		),
+		tnf_auth_page_url('my-account')
+	);
+}
+
+/**
+ * Redirect failed sign-in to the login page with a safe WP_Error code in the query string.
+ */
+function tnf_auth_login_error_redirect(WP_Error $error): void {
+	$code  = (string) $error->get_error_code();
+	$allow = array(
+		'invalid_username',
+		'invalid_email',
+		'incorrect_password',
+		'empty_username',
+		'empty_password',
+		'authentication_failed',
+	);
+	$key = in_array($code, $allow, true) ? $code : 'login_failed';
+	wp_safe_redirect(tnf_auth_login_page_status_url('err', $key));
+	exit;
+}
+
+/**
  * Human-readable auth message from query args.
  */
 function tnf_auth_flash_message_html(): string {
@@ -103,6 +166,12 @@ function tnf_auth_flash_message_html(): string {
 	$map = array(
 		'login_ok'       => __('Login successful.', 'tnf-news-platform'),
 		'login_failed'   => __('Invalid username/email or password.', 'tnf-news-platform'),
+		'invalid_username' => __('That username was not found. Try your email address or create an account.', 'tnf-news-platform'),
+		'invalid_email'  => __('That email address was not found. Check spelling or try your username.', 'tnf-news-platform'),
+		'incorrect_password' => __('The password you entered is incorrect.', 'tnf-news-platform'),
+		'empty_username' => __('Please enter your username or email.', 'tnf-news-platform'),
+		'empty_password' => __('Please enter your password.', 'tnf-news-platform'),
+		'authentication_failed' => __('Login could not be completed. Check your details and try again.', 'tnf-news-platform'),
 		'register_ok'    => __('Account created successfully. You are now logged in.', 'tnf-news-platform'),
 		'register_failed'=> __('Could not create account. Please try again.', 'tnf-news-platform'),
 		'password_sent'  => __('Password reset email sent. Please check your inbox.', 'tnf-news-platform'),
@@ -114,6 +183,7 @@ function tnf_auth_flash_message_html(): string {
 		'premium_required' => __('Please login with an active premium account to access this report.', 'tnf-news-platform'),
 		'submission_ok'    => __('Your news submission was sent for review.', 'tnf-news-platform'),
 		'submission_failed'=> __('Could not submit news. Please try again.', 'tnf-news-platform'),
+		'submission_deleted' => __('That submission was removed from your list.', 'tnf-news-platform'),
 	);
 
 	$text = $map[$msg] ?? '';
@@ -137,9 +207,27 @@ function tnf_handle_frontend_auth_forms(): void {
 	}
 
 	$action = sanitize_key((string) wp_unslash($_POST['tnf_auth_action']));
-	$nonce  = isset($_POST['tnf_auth_nonce']) ? sanitize_text_field((string) wp_unslash($_POST['tnf_auth_nonce'])) : '';
+
+	if ($action === 'delete_submission') {
+		$sid   = isset($_POST['tnf_submission_id']) ? absint((string) wp_unslash($_POST['tnf_submission_id'])) : 0;
+		$nonce = isset($_POST['tnf_auth_nonce']) ? sanitize_text_field((string) wp_unslash($_POST['tnf_auth_nonce'])) : '';
+		if ($sid <= 0 || ! wp_verify_nonce($nonce, 'tnf_auth_delete_submission_' . $sid)) {
+			wp_safe_redirect(tnf_auth_my_account_status_url('err', 'invalid_nonce'));
+			exit;
+		}
+		tnf_auth_handle_delete_submission($sid);
+		return;
+	}
+
+	$nonce = isset($_POST['tnf_auth_nonce']) ? sanitize_text_field((string) wp_unslash($_POST['tnf_auth_nonce'])) : '';
 	if (! wp_verify_nonce($nonce, 'tnf_auth_' . $action)) {
-		wp_safe_redirect(tnf_auth_status_url('err', 'invalid_nonce'));
+		if ($action === 'login') {
+			wp_safe_redirect(tnf_auth_login_page_status_url('err', 'invalid_nonce'));
+		} elseif ($action === 'submit_news' && is_user_logged_in()) {
+			wp_safe_redirect(tnf_auth_my_account_status_url('err', 'invalid_nonce'));
+		} else {
+			wp_safe_redirect(tnf_auth_status_url('err', 'invalid_nonce'));
+		}
 		exit;
 	}
 
@@ -158,30 +246,163 @@ function tnf_handle_frontend_auth_forms(): void {
 }
 
 /**
- * Process login submit.
+ * Promoted news post ID stored on a submission (0 if none).
  */
-function tnf_auth_handle_login(): void {
-	$login = isset($_POST['tnf_login']) ? sanitize_text_field((string) wp_unslash($_POST['tnf_login'])) : '';
-	$pass  = isset($_POST['tnf_password']) ? (string) wp_unslash($_POST['tnf_password']) : '';
-	$redir = isset($_POST['tnf_redirect_to']) ? esc_url_raw((string) wp_unslash($_POST['tnf_redirect_to'])) : '';
+function tnf_auth_submission_promoted_news_id(int $submission_id): int {
+	if ($submission_id <= 0) {
+		return 0;
+	}
 
-	if ($login === '' || $pass === '') {
-		wp_safe_redirect(tnf_auth_status_url('err', 'missing_fields'));
+	return (int) get_post_meta($submission_id, 'tnf_promoted_news_id', true);
+}
+
+/**
+ * Live published news article linked from a submission, if any.
+ */
+function tnf_auth_submission_live_news_post(int $submission_id): ?WP_Post {
+	$nid = tnf_auth_submission_promoted_news_id($submission_id);
+	if ($nid <= 0) {
+		return null;
+	}
+	$p = get_post($nid);
+	if (! $p instanceof WP_Post || $p->post_type !== 'tnf_news' || $p->post_status !== 'publish') {
+		return null;
+	}
+
+	return $p;
+}
+
+/**
+ * Whether the current user may trash this submission from My Account.
+ */
+function tnf_auth_submission_user_may_delete(int $submission_id, int $user_id): bool {
+	if ($submission_id <= 0 || $user_id <= 0) {
+		return false;
+	}
+	$p = get_post($submission_id);
+	if (! $p instanceof WP_Post || $p->post_type !== 'tnf_user_submission' || (int) $p->post_author !== $user_id) {
+		return false;
+	}
+	if (! current_user_can('delete_post', $submission_id)) {
+		return false;
+	}
+
+	$st = (string) get_post_meta($submission_id, 'tnf_submission_status', true);
+	if ($st === '') {
+		$st = (string) $p->post_status;
+	}
+
+	if (in_array($st, array('pending', 'draft'), true) || $st === 'rejected') {
+		return true;
+	}
+
+	if ($st === 'approved' && ! tnf_auth_submission_live_news_post($submission_id)) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
+ * Trash a user submission from the account dashboard (withdraw / cleanup).
+ *
+ * @param int $submission_id Submission post ID.
+ */
+function tnf_auth_handle_delete_submission(int $submission_id): void {
+	if (! is_user_logged_in() || ! current_user_can('create_tnf_submissions')) {
+		wp_safe_redirect(tnf_auth_my_account_status_url('err', 'submission_failed'));
 		exit;
 	}
 
-	$username = $login;
-	if (is_email($login)) {
-		$user = get_user_by('email', $login);
-		if ($user) {
-			$username = $user->user_login;
+	$uid = get_current_user_id();
+	if (! tnf_auth_submission_user_may_delete($submission_id, $uid)) {
+		wp_safe_redirect(tnf_auth_my_account_status_url('err', 'submission_failed'));
+		exit;
+	}
+
+	$ok = wp_trash_post($submission_id);
+	if (! $ok) {
+		wp_safe_redirect(tnf_auth_my_account_status_url('err', 'submission_failed'));
+		exit;
+	}
+
+	wp_safe_redirect(tnf_auth_my_account_status_url('ok', 'submission_deleted'));
+	exit;
+}
+
+/**
+ * True when redirect target points to auth/login pages.
+ *
+ * @param string $url Candidate redirect URL.
+ */
+function tnf_auth_is_auth_redirect_target(string $url): bool {
+	if ($url === '') {
+		return false;
+	}
+
+	$path = (string) wp_parse_url($url, PHP_URL_PATH);
+	$path = trim($path, '/');
+	if ($path === '') {
+		return false;
+	}
+
+	// Block redirects back into auth entry points to avoid login loops.
+	$blocked_suffixes = array(
+		'wp-login.php',
+		'login',
+		'register',
+		'forgot-password',
+	);
+	foreach ($blocked_suffixes as $suffix) {
+		if ($path === $suffix || tnf_auth_string_ends_with($path, '/' . $suffix)) {
+			return true;
 		}
 	}
 
+	return false;
+}
+
+/**
+ * PHP-version-safe string ends-with helper.
+ *
+ * @param string $haystack Full string.
+ * @param string $needle   Expected suffix.
+ */
+function tnf_auth_string_ends_with(string $haystack, string $needle): bool {
+	if ($needle === '') {
+		return true;
+	}
+
+	$needle_len = strlen($needle);
+	if ($needle_len > strlen($haystack)) {
+		return false;
+	}
+
+	return substr($haystack, -$needle_len) === $needle;
+}
+
+/**
+ * Process login submit.
+ */
+function tnf_auth_handle_login(): void {
+	// Match core wp_signon() defaults: trim + wp_unslash only (no sanitize_text_field / custom resolver).
+	$login = isset($_POST['tnf_login']) && is_string($_POST['tnf_login']) ? trim(wp_unslash($_POST['tnf_login'])) : '';
+	$pass  = isset($_POST['tnf_password']) && is_string($_POST['tnf_password']) ? (string) wp_unslash($_POST['tnf_password']) : '';
+	$redir = isset($_POST['tnf_redirect_to']) ? esc_url_raw((string) wp_unslash($_POST['tnf_redirect_to'])) : '';
+
+	if ($login === '' || $pass === '') {
+		wp_safe_redirect(tnf_auth_login_page_status_url('err', 'missing_fields'));
+		exit;
+	}
+
+	if (tnf_auth_is_auth_redirect_target($redir)) {
+		$redir = '';
+	}
+
 	$remember = ! empty($_POST['tnf_remember']);
-	$auth = wp_signon(
+	$auth     = wp_signon(
 		array(
-			'user_login'    => $username,
+			'user_login'    => $login,
 			'user_password' => $pass,
 			'remember'      => $remember,
 		),
@@ -189,9 +410,11 @@ function tnf_auth_handle_login(): void {
 	);
 
 	if (is_wp_error($auth)) {
-		wp_safe_redirect(tnf_auth_status_url('err', 'login_failed'));
-		exit;
+		tnf_auth_login_error_redirect($auth);
 	}
+
+	// wp_signon() sets cookies but does not set the current user for this request.
+	wp_set_current_user((int) $auth->ID);
 
 	$target = $redir !== '' ? $redir : tnf_auth_default_redirect_for_user((int) $auth->ID);
 	wp_safe_redirect($target);
@@ -275,19 +498,71 @@ function tnf_auth_handle_forgot_password(): void {
 }
 
 /**
+ * Save optional featured image from the submission form (multipart upload).
+ *
+ * @param int $post_id Submission post ID.
+ */
+function tnf_auth_save_submission_uploaded_image(int $post_id): void {
+	if ($post_id <= 0 || ! current_user_can('upload_files')) {
+		return;
+	}
+	if (empty($_FILES['tnf_submission_image']['name'])) {
+		return;
+	}
+	$err = isset($_FILES['tnf_submission_image']['error']) ? (int) $_FILES['tnf_submission_image']['error'] : UPLOAD_ERR_NO_FILE;
+	if ($err !== UPLOAD_ERR_OK) {
+		return;
+	}
+
+	$max_bytes = (int) min((int) wp_max_upload_size(), 5 * MB_IN_BYTES);
+	if (isset($_FILES['tnf_submission_image']['size']) && (int) $_FILES['tnf_submission_image']['size'] > $max_bytes) {
+		return;
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+
+	$prefilter = static function (array $file) use ($max_bytes): array {
+		if (isset($file['size']) && (int) $file['size'] > $max_bytes) {
+			$file['error'] = UPLOAD_ERR_FORM_SIZE;
+		}
+		return $file;
+	};
+	add_filter('wp_handle_upload_prefilter', $prefilter);
+	$aid = media_handle_upload('tnf_submission_image', $post_id);
+	remove_filter('wp_handle_upload_prefilter', $prefilter);
+
+	if (is_wp_error($aid)) {
+		return;
+	}
+
+	$file_path = get_attached_file((int) $aid);
+	$check     = is_string($file_path) ? wp_check_filetype($file_path) : array( 'type' => '' );
+	$allowed   = array('image/jpeg', 'image/png', 'image/webp', 'image/gif');
+	if (! isset($check['type']) || ! in_array($check['type'], $allowed, true)) {
+		wp_delete_attachment((int) $aid, true);
+		return;
+	}
+
+	set_post_thumbnail($post_id, (int) $aid);
+}
+
+/**
  * Handle front-end user submission form.
  */
 function tnf_auth_handle_submit_news(): void {
 	if (! is_user_logged_in() || ! current_user_can('create_tnf_submissions')) {
-		wp_safe_redirect(tnf_auth_status_url('err', 'submission_failed'));
+		wp_safe_redirect(tnf_auth_my_account_status_url('err', 'submission_failed'));
 		exit;
 	}
 
 	$title   = isset($_POST['tnf_submission_title']) ? sanitize_text_field((string) wp_unslash($_POST['tnf_submission_title'])) : '';
 	$content = isset($_POST['tnf_submission_content']) ? wp_kses_post((string) wp_unslash($_POST['tnf_submission_content'])) : '';
+	$video   = isset($_POST['tnf_submission_video_url']) ? esc_url_raw((string) wp_unslash($_POST['tnf_submission_video_url'])) : '';
 
 	if ($title === '' || $content === '') {
-		wp_safe_redirect(tnf_auth_status_url('err', 'missing_fields'));
+		wp_safe_redirect(tnf_auth_my_account_status_url('err', 'missing_fields'));
 		exit;
 	}
 
@@ -303,12 +578,20 @@ function tnf_auth_handle_submit_news(): void {
 	);
 
 	if (is_wp_error($post_id) || ! $post_id) {
-		wp_safe_redirect(tnf_auth_status_url('err', 'submission_failed'));
+		wp_safe_redirect(tnf_auth_my_account_status_url('err', 'submission_failed'));
 		exit;
 	}
 
-	update_post_meta((int) $post_id, 'tnf_submission_status', 'pending');
-	wp_safe_redirect(tnf_auth_status_url('ok', 'submission_ok'));
+	$post_id = (int) $post_id;
+	update_post_meta($post_id, 'tnf_submission_status', 'pending');
+
+	if ($video !== '') {
+		update_post_meta($post_id, 'tnf_embed_url', $video);
+	}
+
+	tnf_auth_save_submission_uploaded_image($post_id);
+
+	wp_safe_redirect(tnf_auth_my_account_status_url('ok', 'submission_ok'));
 	exit;
 }
 
@@ -319,7 +602,7 @@ function tnf_sc_login_form(): string {
 	if (is_user_logged_in()) {
 		return tnf_sc_account_box();
 	}
-	$redir = home_url('/');
+	$redir = '';
 	if (isset($_GET['redirect_to'])) {
 		$decoded = rawurldecode((string) wp_unslash($_GET['redirect_to']));
 		$decoded = esc_url_raw($decoded);
@@ -437,7 +720,8 @@ function tnf_sc_account_box(): string {
 	echo '<h1 class="tnf-auth-title">' . esc_html__('My Account', 'tnf-news-platform') . '</h1>';
 	echo '<div class="tnf-kpi-grid">';
 	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Total Submissions', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['total']) . '</strong></article>';
-	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Approved', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['approved']) . '</strong></article>';
+	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Live on site', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['approved']) . '</strong></article>';
+	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Article removed', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['removed']) . '</strong></article>';
 	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Pending', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['pending']) . '</strong></article>';
 	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Rejected', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['rejected']) . '</strong></article>';
 	echo '</div>';
@@ -455,10 +739,12 @@ function tnf_sc_account_box(): string {
 	if (current_user_can('create_tnf_submissions')) {
 		echo '<section class="tnf-dash-card tnf-submit-card">';
 		echo '<h3>' . esc_html__('Submit News', 'tnf-news-platform') . '</h3>';
-		echo '<p class="tnf-dash-note">' . esc_html__('Share your verified news. Our editorial team will review and publish approved submissions.', 'tnf-news-platform') . '</p>';
-		echo '<form method="post" class="tnf-auth-form tnf-submit-form">';
+		echo '<p class="tnf-dash-note">' . esc_html__('Share your verified news. Our editorial team will review and publish approved submissions. You may add one image (JPEG, PNG, WebP, or GIF, up to 5 MB) and an optional video link (YouTube, etc.).', 'tnf-news-platform') . '</p>';
+		echo '<form method="post" class="tnf-auth-form tnf-submit-form" enctype="multipart/form-data">';
 		echo '<p><label>' . esc_html__('Title', 'tnf-news-platform') . '<br /><input type="text" name="tnf_submission_title" required /></label></p>';
 		echo '<p><label>' . esc_html__('Content', 'tnf-news-platform') . '<br /><textarea name="tnf_submission_content" rows="5" required></textarea></label></p>';
+		echo '<p><label>' . esc_html__('Video link (optional)', 'tnf-news-platform') . '<br /><input type="url" name="tnf_submission_video_url" placeholder="https://www.youtube.com/watch?v=…" autocomplete="url" /></label></p>';
+		echo '<p><label>' . esc_html__('Image (optional)', 'tnf-news-platform') . '<br /><input type="file" name="tnf_submission_image" accept="image/jpeg,image/png,image/webp,image/gif" /></label></p>';
 		echo '<input type="hidden" name="tnf_auth_action" value="submit_news" />';
 		wp_nonce_field('tnf_auth_submit_news', 'tnf_auth_nonce');
 		echo '<p><button type="submit">' . esc_html__('Send for Review', 'tnf-news-platform') . '</button></p>';
@@ -471,13 +757,54 @@ function tnf_sc_account_box(): string {
 	if ($sub_q->have_posts()) {
 		echo '<ul class="tnf-submissions-list">';
 		foreach ($sub_q->posts as $p) {
-			$status = (string) get_post_meta((int) $p->ID, 'tnf_submission_status', true);
+			$sid        = (int) $p->ID;
+			$status     = (string) get_post_meta($sid, 'tnf_submission_status', true);
 			if ($status === '') {
 				$status = (string) $p->post_status;
 			}
-			$status_key = sanitize_html_class(strtolower($status));
-			$meta_line = get_the_date('', $p);
-			echo '<li><div><strong>' . esc_html(get_the_title($p)) . '</strong><span class="tnf-submissions-meta">' . esc_html($meta_line) . '</span></div><span class="tnf-sub-status tnf-sub-status--' . esc_attr($status_key) . '">' . esc_html(ucfirst($status)) . '</span></li>';
+			$meta_line  = get_the_date('', $p);
+			$live_news  = tnf_auth_submission_live_news_post($sid);
+			$news_id    = tnf_auth_submission_promoted_news_id($sid);
+			$gone       = ( $status === 'approved' || $news_id > 0 ) && ! $live_news;
+
+			$display_status = $status;
+			$status_key     = sanitize_html_class(strtolower((string) preg_replace('/\s+/', '-', $status)));
+			if ($gone) {
+				$display_status = __('Article removed', 'tnf-news-platform');
+				$status_key     = 'removed';
+			}
+
+			echo '<li class="tnf-submissions-list__item">';
+			echo '<div class="tnf-submissions-list__main"><strong>' . esc_html(get_the_title($p)) . '</strong>';
+			echo '<span class="tnf-submissions-meta">' . esc_html($meta_line) . '</span>';
+
+			if ($live_news instanceof WP_Post) {
+				$news_url = get_permalink($live_news);
+				if (is_string($news_url) && $news_url !== '') {
+					echo '<br /><a class="tnf-sub-published-link" href="' . esc_url($news_url) . '">' . esc_html__('View published story', 'tnf-news-platform') . '</a>';
+				}
+			} elseif ($gone) {
+				echo '<br /><span class="tnf-sub-removed-note">' . esc_html__('The published article is no longer on the site (deleted or unpublished by an editor).', 'tnf-news-platform') . '</span>';
+			}
+
+			if ($status === 'rejected') {
+				$rr = (string) get_post_meta($sid, 'tnf_rejection_reason', true);
+				if ($rr !== '') {
+					echo '<br /><span class="tnf-sub-reason">' . esc_html($rr) . '</span>';
+				}
+			}
+
+			if (tnf_auth_submission_user_may_delete($sid, (int) $user->ID)) {
+				echo '<form method="post" class="tnf-sub-delete-form" style="display:inline" onsubmit="return confirm(\'' . esc_js(__('Remove this submission from your list?', 'tnf-news-platform')) . '\');">';
+				echo '<input type="hidden" name="tnf_auth_action" value="delete_submission" />';
+				echo '<input type="hidden" name="tnf_submission_id" value="' . esc_attr((string) $sid) . '" />';
+				wp_nonce_field('tnf_auth_delete_submission_' . $sid, 'tnf_auth_nonce');
+				echo '<button type="submit" class="tnf-sub-delete-btn">' . esc_html__('Remove', 'tnf-news-platform') . '</button>';
+				echo '</form>';
+			}
+
+			$status_label = $gone ? esc_html((string) $display_status) : esc_html(ucfirst((string) $display_status));
+			echo '</div><span class="tnf-sub-status tnf-sub-status--' . esc_attr($status_key) . '">' . $status_label . '</span></li>';
 		}
 		echo '</ul>';
 	} else {
@@ -674,6 +1001,31 @@ function tnf_auth_body_class(array $classes): array {
 }
 
 /**
+ * Send guests to login instead of rendering an empty My Account shortcode.
+ */
+function tnf_auth_redirect_guest_from_my_account(): void {
+	if (is_admin() || (function_exists('wp_doing_ajax') && wp_doing_ajax())) {
+		return;
+	}
+	if (! is_page('my-account') || is_user_logged_in()) {
+		return;
+	}
+
+	$req = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '/';
+	$here = (is_ssl() ? 'https://' : 'http://') . (string) ($_SERVER['HTTP_HOST'] ?? '') . $req;
+	$here = esc_url_raw($here);
+
+	$login = add_query_arg(
+		array(
+			'redirect_to' => $here,
+		),
+		tnf_auth_page_url('login')
+	);
+	wp_safe_redirect($login, 302);
+	exit;
+}
+
+/**
  * Protect restricted PDF report single pages and redirect to login/account flow.
  */
 function tnf_auth_protect_restricted_pdf_pages(): void {
@@ -692,11 +1044,12 @@ function tnf_auth_protect_restricted_pdf_pages(): void {
 	}
 
 	$current_url = (is_ssl() ? 'https://' : 'http://') . (string) ($_SERVER['HTTP_HOST'] ?? '') . (string) ($_SERVER['REQUEST_URI'] ?? '/');
+	$current_url = esc_url_raw($current_url);
 
 	if (! is_user_logged_in()) {
 		$login_url = add_query_arg(
 			array(
-				'redirect_to'     => rawurlencode($current_url),
+				'redirect_to'     => $current_url,
 				'tnf_auth_status' => 'err',
 				'tnf_auth_msg'    => 'premium_required',
 			),
@@ -855,6 +1208,7 @@ function tnf_auth_submission_counts_for_user(int $user_id): array {
 	$counts = array(
 		'total'    => 0,
 		'approved' => 0,
+		'removed'  => 0,
 		'pending'  => 0,
 		'rejected' => 0,
 	);
@@ -865,7 +1219,8 @@ function tnf_auth_submission_counts_for_user(int $user_id): array {
 	$q = new WP_Query(
 		array(
 			'post_type'      => 'tnf_user_submission',
-			'post_status'    => array('pending', 'draft', 'private', 'publish', 'trash'),
+			// Match My Submissions list: trashed rows are hidden and should not affect KPIs.
+			'post_status'    => array('pending', 'draft', 'private', 'publish'),
 			'author'         => $user_id,
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
@@ -878,14 +1233,19 @@ function tnf_auth_submission_counts_for_user(int $user_id): array {
 
 	$counts['total'] = count($q->posts);
 	foreach ($q->posts as $submission_id) {
-		$status = (string) get_post_meta((int) $submission_id, 'tnf_submission_status', true);
+		$submission_id = (int) $submission_id;
+		$status        = (string) get_post_meta($submission_id, 'tnf_submission_status', true);
 		if ($status === '') {
-			$status = (string) get_post_status((int) $submission_id);
+			$status = (string) get_post_status($submission_id);
 		}
 		$status = strtolower($status);
 
-		if (in_array($status, array('publish', 'approved'), true)) {
-			$counts['approved']++;
+		if ($status === 'approved' || ( $status === 'publish' && tnf_auth_submission_promoted_news_id($submission_id) > 0 )) {
+			if (tnf_auth_submission_live_news_post($submission_id)) {
+				$counts['approved']++;
+			} else {
+				$counts['removed']++;
+			}
 			continue;
 		}
 		if (in_array($status, array('pending', 'draft'), true)) {

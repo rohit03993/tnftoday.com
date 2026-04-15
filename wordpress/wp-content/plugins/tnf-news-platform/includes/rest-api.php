@@ -113,7 +113,7 @@ function tnf_register_rest_routes(): void {
 			'methods'             => 'POST',
 			'callback'            => 'tnf_rest_submissions_approve',
 			'permission_callback' => function () {
-				return current_user_can('edit_others_posts') || current_user_can('publish_posts');
+				return tnf_user_can_moderate_submissions();
 			},
 		)
 	);
@@ -135,7 +135,7 @@ function tnf_register_rest_routes(): void {
 			'methods'             => 'POST',
 			'callback'            => 'tnf_rest_submissions_reject',
 			'permission_callback' => function () {
-				return current_user_can('edit_others_posts') || current_user_can('publish_posts');
+				return tnf_user_can_moderate_submissions();
 			},
 		)
 	);
@@ -317,8 +317,9 @@ function tnf_rest_videos_list(WP_REST_Request $req): WP_REST_Response {
  * @param WP_REST_Request $req Request.
  */
 function tnf_rest_submissions_create(WP_REST_Request $req): WP_REST_Response|WP_Error {
-	$title   = sanitize_text_field($req->get_param('title'));
-	$content = wp_kses_post($req->get_param('content'));
+	$title     = sanitize_text_field($req->get_param('title'));
+	$content   = wp_kses_post($req->get_param('content'));
+	$video_url = esc_url_raw((string) $req->get_param('video_url'));
 	if ($title === '') {
 		return new WP_Error('bad_request', __('Title required', 'tnf-news-platform'), array('status' => 400));
 	}
@@ -339,6 +340,9 @@ function tnf_rest_submissions_create(WP_REST_Request $req): WP_REST_Response|WP_
 	}
 
 	update_post_meta($post_id, 'tnf_submission_status', 'pending');
+	if ($video_url !== '') {
+		update_post_meta((int) $post_id, 'tnf_embed_url', $video_url);
+	}
 
 	return new WP_REST_Response(
 		array(
@@ -383,38 +387,14 @@ function tnf_rest_submissions_mine(WP_REST_Request $req): WP_REST_Response {
  * @param WP_REST_Request $req Request.
  */
 function tnf_rest_submissions_approve(WP_REST_Request $req): WP_REST_Response|WP_Error {
-	$sub = get_post((int) $req['id']);
-	if (! $sub || 'tnf_user_submission' !== $sub->post_type) {
-		return new WP_Error('not_found', __('Not found', 'tnf-news-platform'), array('status' => 404));
-	}
-
-	$news_id = wp_insert_post(
-		array(
-			'post_type'    => 'tnf_news',
-			'post_title'   => $sub->post_title,
-			'post_content' => $sub->post_content,
-			'post_status'  => 'publish',
-			'post_author'  => $sub->post_author,
-		),
-		true
-	);
-
+	$news_id = tnf_user_submission_approve((int) $req['id']);
 	if (is_wp_error($news_id)) {
 		return $news_id;
 	}
 
-	update_post_meta($sub->ID, 'tnf_submission_status', 'approved');
-	update_post_meta($sub->ID, 'tnf_promoted_news_id', $news_id);
-	wp_update_post(
-		array(
-			'ID'          => $sub->ID,
-			'post_status' => 'private',
-		)
-	);
-
 	return new WP_REST_Response(
 		array(
-			'submission_id' => $sub->ID,
+			'submission_id' => (int) $req['id'],
 			'news_id'       => $news_id,
 		)
 	);
@@ -537,20 +517,11 @@ function tnf_pdf_report_maybe_set_featured_image_from_pages(int $post_id, array 
  * @param WP_REST_Request $req Request.
  */
 function tnf_rest_submissions_reject(WP_REST_Request $req): WP_REST_Response|WP_Error {
-	$sub = get_post((int) $req['id']);
-	if (! $sub || 'tnf_user_submission' !== $sub->post_type) {
-		return new WP_Error('not_found', __('Not found', 'tnf-news-platform'), array('status' => 404));
+	$reason = sanitize_text_field((string) $req->get_param('reason'));
+	$result = tnf_user_submission_reject((int) $req['id'], $reason);
+	if (is_wp_error($result)) {
+		return $result;
 	}
 
-	$reason = sanitize_text_field($req->get_param('reason'));
-	update_post_meta($sub->ID, 'tnf_rejection_reason', $reason);
-	update_post_meta($sub->ID, 'tnf_submission_status', 'rejected');
-	wp_update_post(
-		array(
-			'ID'          => $sub->ID,
-			'post_status' => 'draft',
-		)
-	);
-
-	return new WP_REST_Response(array('id' => $sub->ID, 'status' => 'rejected'));
+	return new WP_REST_Response(array('id' => (int) $req['id'], 'status' => 'rejected'));
 }

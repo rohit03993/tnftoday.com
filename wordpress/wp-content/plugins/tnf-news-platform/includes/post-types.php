@@ -105,7 +105,7 @@ function tnf_register_post_types(): void {
 			'show_in_rest'        => false,
 			'show_in_menu'        => true,
 			'menu_icon'           => 'dashicons-email-alt',
-			'supports'            => array('title', 'editor', 'author'),
+			'supports'            => array('title', 'editor', 'author', 'thumbnail'),
 			'capability_type'     => array('tnf_submission', 'tnf_submissions'),
 			'map_meta_cap'        => true,
 			'capabilities'        => array(
@@ -211,6 +211,34 @@ function tnf_register_post_types(): void {
 			'default'           => 'pending',
 			'auth_callback'     => function () {
 				return current_user_can('read');
+			},
+		)
+	);
+
+	register_post_meta(
+		'tnf_user_submission',
+		'tnf_embed_url',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'default'           => '',
+			'sanitize_callback' => 'esc_url_raw',
+			'auth_callback'     => function () {
+				return current_user_can('read');
+			},
+		)
+	);
+
+	register_post_meta(
+		'tnf_news',
+		'tnf_embed_url',
+		array(
+			'type'              => 'string',
+			'single'            => true,
+			'default'           => '',
+			'sanitize_callback' => 'esc_url_raw',
+			'auth_callback'     => function () {
+				return current_user_can('edit_posts');
 			},
 		)
 	);

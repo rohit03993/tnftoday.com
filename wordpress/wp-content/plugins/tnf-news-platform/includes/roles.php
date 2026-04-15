@@ -31,6 +31,9 @@ function tnf_register_roles(): void {
 		if (! $subscriber->has_cap('tnf_submit_news')) {
 			$subscriber->add_cap('tnf_submit_news');
 		}
+		if (! $subscriber->has_cap('upload_files')) {
+			$subscriber->add_cap('upload_files');
+		}
 	}
 
 	$editor = get_role('editor');
@@ -48,24 +51,27 @@ function tnf_register_roles(): void {
 		}
 	}
 
-	if (get_role('tnf_subscriber')) {
-		return;
+	// Always (re)sync TNF Subscriber caps. Early-return here used to skip updates once the role
+	// existed, so missing `read` or submission caps could strand real users after plugin changes.
+	$tnf_required = array_merge(
+		array('read', 'tnf_submit_news', 'tnf_read_premium', 'upload_files'),
+		$submission_caps
+	);
+
+	$tnf_role = get_role('tnf_subscriber');
+	if (! $tnf_role) {
+		add_role(
+			'tnf_subscriber',
+			__('TNF Subscriber', 'tnf-news-platform'),
+			array_fill_keys($tnf_required, true)
+		);
+	} else {
+		foreach ($tnf_required as $cap) {
+			if (! $tnf_role->has_cap($cap)) {
+				$tnf_role->add_cap($cap);
+			}
+		}
 	}
-
-	$caps = array_merge(
-		array(
-			'read'               => true,
-			'tnf_submit_news'    => true,
-			'tnf_read_premium'   => true,
-		),
-		array_fill_keys($submission_caps, true)
-	);
-
-	add_role(
-		'tnf_subscriber',
-		__('TNF Subscriber', 'tnf-news-platform'),
-		$caps
-	);
 }
 
 /**
