@@ -411,15 +411,17 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 					<?php if (function_exists('has_custom_logo') && has_custom_logo()) : ?>
 						<div class="tnf-logo-image"><?php the_custom_logo(); ?></div>
 					<?php endif; ?>
-					<div class="tnf-brand"><?php echo esc_html(get_bloginfo('name', 'display')); ?></div>
 					<?php
-					$masthead_tagline = '';
-					if (function_exists('get_theme_mod')) {
-						$masthead_tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
+					$site_title = trim((string) get_bloginfo('name', 'display'));
+					$tagline    = trim((string) get_bloginfo('description', 'display'));
+					if ($tagline === '' && function_exists('get_theme_mod')) {
+						// Backward compatibility: keep existing custom tagline only when WP tagline is empty.
+						$tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
 					}
-					if ($masthead_tagline !== '') :
-						?>
-					<div class="tnf-meta"><?php echo esc_html($masthead_tagline); ?></div>
+					?>
+					<div class="tnf-brand"><?php echo esc_html($site_title); ?></div>
+					<?php if ($tagline !== '') : ?>
+					<div class="tnf-meta"><?php echo esc_html($tagline); ?></div>
 					<?php endif; ?>
 				</div>
 				<div class="tnf-head-ad" aria-hidden="true">
