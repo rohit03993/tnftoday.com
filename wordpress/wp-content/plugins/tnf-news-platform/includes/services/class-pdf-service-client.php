@@ -10,20 +10,32 @@ if (! defined('ABSPATH')) {
 }
 
 /**
- * Service base URL.
+ * Service base URL (FastAPI PDF worker). Local default is localhost; production must set
+ * TNF_PDF_SERVICE_URL in wp-config.php, TNF_PDF_SERVICE_URL env, or the tnf_pdf_service_base_url filter.
  */
 function tnf_pdf_service_base_url(): string {
-	if (defined('TNF_PDF_SERVICE_URL') && TNF_PDF_SERVICE_URL) {
-		return rtrim(TNF_PDF_SERVICE_URL, '/');
+	if ( defined( 'TNF_PDF_SERVICE_URL' ) && TNF_PDF_SERVICE_URL ) {
+		return rtrim( (string) TNF_PDF_SERVICE_URL, '/' );
 	}
-	return 'http://localhost:8000';
+	$env = getenv( 'TNF_PDF_SERVICE_URL' );
+	if ( is_string( $env ) && $env !== '' ) {
+		return rtrim( $env, '/' );
+	}
+	$url = apply_filters( 'tnf_pdf_service_base_url', 'http://localhost:8000' );
+
+	return rtrim( (string) $url, '/' );
 }
 
 /**
  * Shared secret header value.
  */
 function tnf_pdf_service_secret(): string {
-	return defined('TNF_PDF_SERVICE_SECRET') ? (string) TNF_PDF_SERVICE_SECRET : '';
+	if ( defined( 'TNF_PDF_SERVICE_SECRET' ) && TNF_PDF_SERVICE_SECRET ) {
+		return (string) TNF_PDF_SERVICE_SECRET;
+	}
+	$env = getenv( 'TNF_PDF_SERVICE_SECRET' );
+
+	return is_string( $env ) ? $env : '';
 }
 
 /**
