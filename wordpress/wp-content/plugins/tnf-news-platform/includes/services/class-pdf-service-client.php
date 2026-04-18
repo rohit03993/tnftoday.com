@@ -11,7 +11,7 @@ if (! defined('ABSPATH')) {
 
 /**
  * Service base URL (FastAPI PDF worker). Local default is localhost; production must set
- * TNF_PDF_SERVICE_URL in wp-config.php, TNF_PDF_SERVICE_URL env, or the tnf_pdf_service_base_url filter.
+ * TNF_PDF_SERVICE_URL in wp-config.php, env, Settings → TNF PDF / ePaper, or the tnf_pdf_service_base_url filter.
  */
 function tnf_pdf_service_base_url(): string {
 	if ( defined( 'TNF_PDF_SERVICE_URL' ) && TNF_PDF_SERVICE_URL ) {
@@ -20,6 +20,13 @@ function tnf_pdf_service_base_url(): string {
 	$env = getenv( 'TNF_PDF_SERVICE_URL' );
 	if ( is_string( $env ) && $env !== '' ) {
 		return rtrim( $env, '/' );
+	}
+	$opt = get_option( 'tnf_pdf_service_url', '' );
+	if ( is_string( $opt ) && $opt !== '' ) {
+		$u = esc_url_raw( $opt );
+		if ( is_string( $u ) && $u !== '' ) {
+			return untrailingslashit( $u );
+		}
 	}
 	$url = apply_filters( 'tnf_pdf_service_base_url', 'http://localhost:8000' );
 
@@ -34,8 +41,12 @@ function tnf_pdf_service_secret(): string {
 		return (string) TNF_PDF_SERVICE_SECRET;
 	}
 	$env = getenv( 'TNF_PDF_SERVICE_SECRET' );
+	if ( is_string( $env ) && $env !== '' ) {
+		return $env;
+	}
+	$opt = get_option( 'tnf_pdf_service_secret', '' );
 
-	return is_string( $env ) ? $env : '';
+	return is_string( $opt ) ? $opt : '';
 }
 
 /**

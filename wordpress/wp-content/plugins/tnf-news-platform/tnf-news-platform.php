@@ -23,6 +23,7 @@ require_once TNF_NEWS_PLATFORM_PATH . 'includes/roles.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/workflows.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/rest-api.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/services/class-pdf-service-client.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/pdf-service-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/services/class-push-notifications.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/pdf-integration.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/footer-settings.php';
