@@ -785,7 +785,7 @@ function tnf_prepend_pdf_report_viewer(string $content): string {
  * @param string $content Post content.
  */
 function tnf_prepend_news_embed(string $content): string {
-	if (! is_singular('tnf_news')) {
+	if (! tnf_is_news_article_singular()) {
 		return $content;
 	}
 
@@ -894,12 +894,26 @@ function tnf_news_post_thumbnail_url(int $post_id): string {
 /**
  * Related post IDs for a single: same category first, then recent by date.
  *
+ * @param string|array<int,string> $post_type One type or list of types (e.g. tnf_news + post).
  * @return array<int,int>
  */
-function tnf_related_post_ids_for_single(int $post_id, string $post_type, int $limit = 4): array {
+function tnf_related_post_ids_for_single(int $post_id, $post_type, int $limit = 4): array {
 	$post_id = (int) $post_id;
 	$limit   = max(1, min(12, $limit));
-	if ($post_id <= 0 || $post_type === '') {
+	if ($post_id <= 0) {
+		return array();
+	}
+	if (is_string($post_type)) {
+		if ($post_type === '') {
+			return array();
+		}
+		$types = array( $post_type );
+	} elseif (is_array($post_type)) {
+		$types = array_values( array_filter( array_map( 'strval', $post_type ) ) );
+		if ($types === array()) {
+			return array();
+		}
+	} else {
 		return array();
 	}
 
@@ -916,7 +930,7 @@ function tnf_related_post_ids_for_single(int $post_id, string $post_type, int $l
 	$related_ids = array();
 	$exclude     = array($post_id);
 	$base_args   = array(
-		'post_type'           => $post_type,
+		'post_type'           => count( $types ) === 1 ? $types[0] : $types,
 		'post_status'         => 'publish',
 		'ignore_sticky_posts' => true,
 		'orderby'             => 'date',
@@ -1214,11 +1228,14 @@ function tnf_render_block_post_featured_image_tnf_cpts(string $block_content, ar
 		return tnf_post_featured_image_figure_html($post_id, $block, $thumb);
 	}
 
-	if ($type === 'tnf_news') {
+	if ($type === 'tnf_news' || $type === 'post') {
 		if (
 			! is_admin()
-			&& is_singular('tnf_news')
 			&& (int) get_queried_object_id() === $post_id
+			&& (
+				( $type === 'tnf_news' && is_singular('tnf_news') )
+				|| ( $type === 'post' && is_singular('post') )
+			)
 		) {
 			$embed_url = (string) get_post_meta($post_id, 'tnf_embed_url', true);
 			if ($embed_url !== '') {
@@ -1277,7 +1294,7 @@ function tnf_news_single_share_icon_svg(string $id): string {
  * @param string $content Post content.
  */
 function tnf_news_content_with_category_rail(string $content): string {
-	if (! is_singular('tnf_news') || ! in_the_loop() || ! is_main_query()) {
+	if (! tnf_is_news_article_singular() || ! in_the_loop() || ! is_main_query()) {
 		return $content;
 	}
 
@@ -1335,7 +1352,7 @@ function tnf_news_content_with_category_rail(string $content): string {
 	$byline .= '</div>';
 
 	$related_html = '';
-	$related_ids  = tnf_related_post_ids_for_single($post_id, 'tnf_news', 4);
+	$related_ids  = tnf_related_post_ids_for_single($post_id, tnf_listing_news_post_types(), 4);
 
 	if ($related_ids !== array()) {
 		$related_html .= '<section class="tnf-news-related" aria-label="' . esc_attr__('Related news', 'tnf-news-platform') . '">';
@@ -1403,7 +1420,7 @@ function tnf_enqueue_frontend_tnf_cpt_styles(): void {
 
 	$single_css = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-single-news.css';
 	if (
-		is_singular('tnf_news')
+		tnf_is_news_article_singular()
 		|| is_singular('tnf_video')
 		|| is_singular('tnf_pdf_report')
 	) {

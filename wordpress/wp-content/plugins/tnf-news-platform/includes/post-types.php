@@ -34,6 +34,10 @@ function tnf_register_post_types(): void {
 			'show_in_rest'        => true,
 			'rest_base'           => 'tnf-news',
 			'has_archive'         => true,
+			'rewrite'             => array(
+				'slug'       => 'tnf_news',
+				'with_front' => false,
+			),
 			'menu_icon'           => 'dashicons-media-text',
 			'supports'            => array('title', 'editor', 'thumbnail', 'excerpt', 'author'),
 			'capability_type'     => 'post',
@@ -322,6 +326,13 @@ function tnf_listing_news_post_types(): array {
 }
 
 /**
+ * Whether the current singular view should use the news article layout (template + CSS + content chrome).
+ */
+function tnf_is_news_article_singular(): bool {
+	return (bool) is_singular( array( 'tnf_news', 'post' ) );
+}
+
+/**
  * Category and tag archives: list news (tnf_news and regular posts), latest first.
  *
  * @param WP_Query $query Main query.
@@ -393,3 +404,153 @@ function tnf_filter_post_type_archive_title( string $title, string $post_type ):
 	return $title;
 }
 add_filter( 'post_type_archive_title', 'tnf_filter_post_type_archive_title', 10, 2 );
+
+/**
+ * Published news singles: canonical URL is /{post_name}/ (no /tnf_news/ prefix).
+ *
+ * @param string  $post_link Default permalink for this post type.
+ * @param WP_Post $post      Post object.
+ * @param bool    $leavename Whether to leave the post name (for editing).
+ * @param bool    $sample    Sample permalink.
+ */
+function tnf_news_filter_permalink_root( string $post_link, $post, bool $leavename, bool $sample ): string {
+	if ( ! $post instanceof WP_Post || $post->post_type !== 'tnf_news' ) {
+		return $post_link;
+	}
+	if ( $leavename || $sample ) {
+		return $post_link;
+	}
+	if ( 'publish' !== $post->post_status ) {
+		return $post_link;
+	}
+	$slug = $post->post_name;
+	if ( $slug === '' ) {
+		return $post_link;
+	}
+
+	return home_url( user_trailingslashit( rawurldecode( $slug ) ) );
+}
+add_filter( 'post_type_link', 'tnf_news_filter_permalink_root', 9, 4 );
+
+/**
+ * Resolve pretty URLs that use the same pattern as posts (/slug/) to tnf_news when no published post or page claims the slug.
+ *
+ * @param WP_Query $query Main query.
+ */
+function tnf_news_pre_get_posts_resolve_root_slug( WP_Query $query ): void {
+	if ( is_admin() || ! $query->is_main_query() ) {
+		return;
+	}
+	if ( $query->is_feed() || $query->is_trackback() || $query->is_embed() ) {
+		return;
+	}
+	$name = $query->get( 'name' );
+	if ( ! is_string( $name ) || $name === '' ) {
+		return;
+	}
+	if ( $query->get( 'pagename' ) || $query->get( 'page_id' ) || $query->get( 'attachment' ) ) {
+		return;
+	}
+	if ( $query->get( 'year' ) || $query->get( 'monthnum' ) || $query->get( 'day' ) ) {
+		return;
+	}
+	if ( $query->get( 'category_name' ) || $query->get( 'tag' ) || $query->get( 'author_name' ) ) {
+		return;
+	}
+	if ( $query->get( 'post_type' ) === 'tnf_news' ) {
+		return;
+	}
+	$pt = $query->get( 'post_type' );
+	if ( is_array( $pt ) ) {
+		if ( ! in_array( 'post', $pt, true ) ) {
+			return;
+		}
+	} elseif ( is_string( $pt ) && $pt !== '' && $pt !== 'post' ) {
+		return;
+	}
+
+	$block_post = new WP_Query(
+		array(
+			'name'             => $name,
+			'post_type'        => 'post',
+			'post_status'      => array( 'publish', 'future', 'private', 'pending' ),
+			'posts_per_page'   => 1,
+			'fields'           => 'ids',
+			'no_found_rows'    => true,
+			'suppress_filters' => true,
+		)
+	);
+	if ( $block_post->have_posts() ) {
+		return;
+	}
+
+	$page = get_page_by_path( $name, OBJECT, 'page' );
+	if ( $page instanceof WP_Post && in_array( $page->post_status, array( 'publish', 'private', 'pending' ), true ) ) {
+		return;
+	}
+
+	$news = new WP_Query(
+		array(
+			'name'             => $name,
+			'post_type'        => 'tnf_news',
+			'post_status'      => 'publish',
+			'posts_per_page'   => 1,
+			'fields'           => 'ids',
+			'no_found_rows'    => true,
+			'suppress_filters' => true,
+		)
+	);
+	if ( ! $news->have_posts() ) {
+		return;
+	}
+
+	$query->set( 'post_type', 'tnf_news' );
+	$query->set( 'name', $name );
+}
+add_action( 'pre_get_posts', 'tnf_news_pre_get_posts_resolve_root_slug', 0 );
+
+/**
+ * 301 from legacy /tnf_news/{slug}/ to /{slug}/.
+ */
+function tnf_news_redirect_legacy_prefixed_url(): void {
+	if ( is_admin() || ! is_singular( 'tnf_news' ) ) {
+		return;
+	}
+	$req = isset( $_SERVER['REQUEST_URI'] ) ? rawurldecode( (string) wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+	if ( $req === '' ) {
+		return;
+	}
+	$path = (string) wp_parse_url( $req, PHP_URL_PATH );
+	$base = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+	$base = $base !== '' ? untrailingslashit( $base ) : '';
+	if ( $base !== '' && strpos( $path, $base ) === 0 ) {
+		$path = substr( $path, strlen( $base ) );
+	}
+	$path = '/' . ltrim( $path, '/' );
+	if ( strpos( $path, '/tnf_news/' ) === false ) {
+		return;
+	}
+	$url = get_permalink( (int) get_queried_object_id() );
+	if ( ! is_string( $url ) || $url === '' ) {
+		return;
+	}
+	wp_safe_redirect( $url, 301 );
+	exit;
+}
+add_action( 'template_redirect', 'tnf_news_redirect_legacy_prefixed_url', 0 );
+
+/**
+ * One-time rewrite flush after permalink behaviour change (avoids needing re-activate plugin).
+ */
+function tnf_maybe_flush_news_root_rewrite(): void {
+	if ( wp_installing() ) {
+		return;
+	}
+	$version = 'news-root-permalink-1';
+	if ( get_option( 'tnf_rewrite_rules_version' ) === $version ) {
+		return;
+	}
+	flush_rewrite_rules( false );
+	update_option( 'tnf_rewrite_rules_version', $version );
+}
+add_action( 'init', 'tnf_maybe_flush_news_root_rewrite', 99 );

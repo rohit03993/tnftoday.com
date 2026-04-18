@@ -28,16 +28,19 @@
 
 .single-tnf_video .entry-title,
 .single-tnf_pdf_report .entry-title,
-.single-tnf_news .entry-title {
+.single-tnf_news .entry-title,
+.single-post .entry-title {
 	margin-bottom: 0.5rem;
 }
 
 /* ----- News single: article shell (template single-tnf_news.html) ----- */
-.single-tnf_news .tnf-news-single-main {
+.single-tnf_news .tnf-news-single-main,
+.single-post .tnf-news-single-main {
 	margin-top: clamp(0.35rem, 1.5vw, 0.85rem) !important;
 }
 
-.single-tnf_news .tnf-news-single-main > .alignfull {
+.single-tnf_news .tnf-news-single-main > .alignfull,
+.single-post .tnf-news-single-main > .alignfull {
 	max-width: min(1120px, 100%);
 	margin-left: auto !important;
 	margin-right: auto !important;
@@ -45,7 +48,8 @@
 	padding-right: clamp(14px, 4vw, 28px) !important;
 }
 
-.single-tnf_news .wp-block-post-title {
+.single-tnf_news .wp-block-post-title,
+.single-post .wp-block-post-title {
 	margin-top: 0 !important;
 	margin-bottom: 0.65rem !important;
 	font-size: clamp(1.45rem, 2.8vw + 0.6rem, 2.15rem) !important;
@@ -55,7 +59,8 @@
 	color: #0d0d0f !important;
 }
 
-.single-tnf_news .wp-block-post-featured-image {
+.single-tnf_news .wp-block-post-featured-image,
+.single-post .wp-block-post-featured-image {
 	margin-top: 0 !important;
 	margin-bottom: 1rem !important;
 	border-radius: 12px;
@@ -63,29 +68,35 @@
 	box-shadow: 0 4px 24px rgba(15, 15, 25, 0.08);
 }
 
-.single-tnf_news .wp-block-post-featured-image img {
+.single-tnf_news .wp-block-post-featured-image img,
+.single-post .wp-block-post-featured-image img {
 	display: block;
 	width: 100%;
 	height: auto;
 }
 
-.single-tnf_news .wp-block-comments.wp-block-comments-query-loop {
+.single-tnf_news .wp-block-comments.wp-block-comments-query-loop,
+.single-post .wp-block-comments.wp-block-comments-query-loop {
 	margin-top: 2rem !important;
 	margin-bottom: 2rem !important;
 }
 
 .single-tnf_news .tnf-news-content-body .entry-content,
-.single-tnf_news .tnf-news-content-body .entry-content p {
+.single-tnf_news .tnf-news-content-body .entry-content p,
+.single-post .tnf-news-content-body .entry-content,
+.single-post .tnf-news-content-body .entry-content p {
 	font-size: 1.0625rem;
 	line-height: 1.75;
 	color: #1a1a1f;
 }
 
-.single-tnf_news .tnf-news-content-body .entry-content > *:first-child {
+.single-tnf_news .tnf-news-content-body .entry-content > *:first-child,
+.single-post .tnf-news-content-body .entry-content > *:first-child {
 	margin-top: 0;
 }
 
-.single-tnf_news .tnf-news-post-nav-wrap a {
+.single-tnf_news .tnf-news-post-nav-wrap a,
+.single-post .tnf-news-post-nav-wrap a {
 	font-size: 0.9rem;
 	line-height: 1.45;
 }

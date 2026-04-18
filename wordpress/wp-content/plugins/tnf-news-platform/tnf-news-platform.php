@@ -59,7 +59,7 @@ register_activation_hook(__FILE__, 'tnf_news_platform_activate');
 function tnf_news_platform_activate(): void {
 	tnf_register_post_types();
 	tnf_register_roles();
-	update_option('tnf_rewrite_rules_version', 'epaper-videos-1');
+	update_option('tnf_rewrite_rules_version', 'news-root-permalink-1');
 	flush_rewrite_rules();
 }
 
