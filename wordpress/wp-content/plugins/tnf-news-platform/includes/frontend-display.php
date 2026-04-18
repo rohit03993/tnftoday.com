@@ -142,7 +142,7 @@ function tnf_news_breaking_ticker_inner_html(): string {
 
 	$breaking = new WP_Query(
 		array(
-			'post_type'      => 'tnf_news',
+			'post_type'      => tnf_listing_news_post_types(),
 			'post_status'    => 'publish',
 			'posts_per_page' => $count,
 		)

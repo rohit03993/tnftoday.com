@@ -306,7 +306,23 @@ function tnf_ensure_editorial_category_terms(): void {
 add_action( 'init', 'tnf_ensure_editorial_category_terms', 11 );
 
 /**
- * Category and tag archives: list TNF news only, latest first.
+ * Post types shown in shared news listings (home blocks, category/tag archives, ticker).
+ *
+ * Includes the default Post type so articles published as regular posts still appear
+ * alongside the News custom type.
+ *
+ * @return array<int, string>
+ */
+function tnf_listing_news_post_types(): array {
+	if ( post_type_exists( 'tnf_news' ) ) {
+		return array( 'tnf_news', 'post' );
+	}
+
+	return array( 'post' );
+}
+
+/**
+ * Category and tag archives: list news (tnf_news and regular posts), latest first.
  *
  * @param WP_Query $query Main query.
  */
@@ -316,7 +332,7 @@ function tnf_news_main_query_tax_archives( WP_Query $query ): void {
 	}
 
 	if ( $query->is_category() || $query->is_tag() ) {
-		$query->set( 'post_type', 'tnf_news' );
+		$query->set( 'post_type', tnf_listing_news_post_types() );
 		$query->set( 'orderby', 'date' );
 		$query->set( 'order', 'DESC' );
 		$query->set( 'posts_per_page', 20 );

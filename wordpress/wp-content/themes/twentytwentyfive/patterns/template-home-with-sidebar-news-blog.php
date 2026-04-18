@@ -11,6 +11,24 @@
  * @since Twenty Twenty-Five 1.0
  */
 
+if ( ! function_exists( 'twentytwentyfive_tnf_news_list_post_types' ) ) {
+	/**
+	 * Post types for homepage news queries (delegates to plugin when active).
+	 *
+	 * @return array<int, string>
+	 */
+	function twentytwentyfive_tnf_news_list_post_types(): array {
+		if ( function_exists( 'tnf_listing_news_post_types' ) ) {
+			return tnf_listing_news_post_types();
+		}
+		if ( post_type_exists( 'tnf_news' ) ) {
+			return array( 'tnf_news', 'post' );
+		}
+
+		return array( 'post' );
+	}
+}
+
 if ( ! function_exists( 'twentytwentyfive_tnf_render_news_cards' ) ) {
 	/**
 	 * Render compact TNF news cards for a category slug.
@@ -22,7 +40,7 @@ if ( ! function_exists( 'twentytwentyfive_tnf_render_news_cards' ) ) {
 	function twentytwentyfive_tnf_render_news_cards( string $slug, int $count, string $title, string $extra_class = '' ): void {
 		$query = new WP_Query(
 			array(
-				'post_type'      => 'tnf_news',
+				'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
 				'post_status'    => 'publish',
 				'posts_per_page' => $count,
 				'category_name'  => $slug,
@@ -68,7 +86,7 @@ if ( ! function_exists( 'twentytwentyfive_tnf_render_recent_news_grid' ) ) {
 	function twentytwentyfive_tnf_render_recent_news_grid( int $count = 9 ): void {
 		$query = new WP_Query(
 			array(
-				'post_type'      => 'tnf_news',
+				'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
 				'post_status'    => 'publish',
 				'posts_per_page' => $count,
 			)
@@ -152,7 +170,7 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 							<?php
 							$hero = new WP_Query(
 								array(
-									'post_type'      => 'tnf_news',
+									'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
 									'post_status'    => 'publish',
 									'posts_per_page' => 1,
 								)
@@ -173,7 +191,7 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 							<?php
 							$latest = new WP_Query(
 								array(
-									'post_type'      => 'tnf_news',
+									'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
 									'post_status'    => 'publish',
 									'posts_per_page' => 8,
 									'offset'         => 1,
@@ -301,7 +319,7 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 					<?php
 					$trend = new WP_Query(
 						array(
-							'post_type'      => 'tnf_news',
+							'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
 							'post_status'    => 'publish',
 							'posts_per_page' => 8,
 							'orderby'        => 'comment_count',
@@ -325,7 +343,7 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 					<?php
 					$top = new WP_Query(
 						array(
-							'post_type'      => 'tnf_news',
+							'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
 							'post_status'    => 'publish',
 							'posts_per_page' => 6,
 							'orderby'        => 'date',
