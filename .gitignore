@@ -19,7 +19,6 @@ public/swe-worker-*.js
 # Not part of deployable WP custom code (use server / separate ops)
 /docs/
 /infra/
-/pdf-service/
 
 # WordPress runtime (never commit)
 wordpress/wp-content/uploads/
