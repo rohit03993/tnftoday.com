@@ -305,3 +305,54 @@ body.tnf-auth-page .notice.notice-error {
 	border-radius: 6px;
 	border-left-width: 4px;
 }
+
+/* ----- Mobile: comfortable forms, no iOS input zoom ----- */
+@media (max-width: 640px) {
+	.tnf-auth-shell {
+		padding: 0 max(14px, env(safe-area-inset-right)) 40px max(14px, env(safe-area-inset-left));
+	}
+
+	.tnf-auth-card {
+		padding: 22px max(16px, env(safe-area-inset-right)) 26px max(16px, env(safe-area-inset-left));
+		border-radius: 14px;
+	}
+
+	.tnf-auth-form input[type='text'],
+	.tnf-auth-form input[type='email'],
+	.tnf-auth-form input[type='password'],
+	.tnf-auth-form textarea,
+	.tnf-submit-form input[type='text'],
+	.tnf-submit-form input[type='email'],
+	.tnf-submit-form textarea {
+		font-size: 16px;
+		padding: 12px 14px;
+		border-radius: 10px;
+	}
+
+	.tnf-auth-form button[type='submit'],
+	.tnf-submit-form button[type='submit'] {
+		width: 100%;
+		padding: 14px 20px;
+		border-radius: 10px;
+		font-size: 15px;
+	}
+
+	.tnf-account-shell {
+		padding-left: max(14px, env(safe-area-inset-left));
+		padding-right: max(14px, env(safe-area-inset-right));
+	}
+
+	.tnf-kpi-card {
+		padding: 16px 12px;
+	}
+
+	.tnf-dash-card {
+		padding: 16px 14px 10px;
+	}
+}
+
+@media (max-width: 400px) {
+	.tnf-account-box .tnf-kpi-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}

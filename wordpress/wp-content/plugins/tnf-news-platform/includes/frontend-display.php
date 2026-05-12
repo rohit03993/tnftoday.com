@@ -18,6 +18,11 @@ add_filter('render_block', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 
 add_filter('render_block_core/post-featured-image', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
+add_action('wp_head', 'tnf_epaper_clip_social_preview_meta', 2);
+add_filter('wpseo_opengraph_image', 'tnf_epaper_clip_wpseo_opengraph_image', 99);
+add_filter('wpseo_twitter_image', 'tnf_epaper_clip_wpseo_opengraph_image', 99);
+add_filter('rank_math/opengraph/facebook/image', 'tnf_epaper_clip_rank_math_facebook_image', 99);
+add_filter('rank_math/opengraph/twitter/image', 'tnf_epaper_clip_rank_math_facebook_image', 99);
 
 /**
  * Enqueue header/footer chrome CSS (templates using shortcodes or shared classes).
@@ -74,11 +79,11 @@ function tnf_news_category_link(string $slug): string {
 }
 
 /**
- * Primary nav items for TNF chrome.
+ * Nav sections for the chrome menu (mobile: grouped cards; desktop: flattened visually).
  *
- * @return array<int,array<string,string>>
+ * @return array<int, array{id:string, title:string, accent:string, items: array<int, array{label:string, url:string}>}>
  */
-function tnf_news_nav_items(): array {
+function tnf_news_nav_sections(): array {
 	$cats = array(
 		'national'      => __('National', 'tnf-news-platform'),
 		'health'        => __('Health', 'tnf-news-platform'),
@@ -94,18 +99,72 @@ function tnf_news_nav_items(): array {
 		'crime'         => __('Crime', 'tnf-news-platform'),
 	);
 
-	$items = array(
-		array(
-			'label' => __('Home', 'tnf-news-platform'),
-			'url'   => home_url('/'),
-		),
-	);
-
-	foreach ($cats as $slug => $label) {
-		$items[] = array(
-			'label' => $label,
+	$link = static function (string $slug) use ($cats): array {
+		return array(
+			'label' => $cats[ $slug ],
 			'url'   => tnf_news_category_link($slug),
 		);
+	};
+
+	return array(
+		array(
+			'id'     => 'start',
+			'title'  => __('Start here', 'tnf-news-platform'),
+			'accent' => '#c41e3a',
+			'items'  => array(
+				array(
+					'label' => __('Home', 'tnf-news-platform'),
+					'url'   => home_url('/'),
+				),
+			),
+		),
+		array(
+			'id'     => 'daily',
+			'title'  => __('Daily digest', 'tnf-news-platform'),
+			'accent' => '#2563eb',
+			'items'  => array(
+				$link('national'),
+				$link('health'),
+				$link('religion'),
+				$link('entertainment'),
+			),
+		),
+		array(
+			'id'     => 'desk',
+			'title'  => __('Desk & arena', 'tnf-news-platform'),
+			'accent' => '#0d9488',
+			'items'  => array(
+				$link('tech'),
+				$link('politics'),
+				$link('sports'),
+				$link('business'),
+			),
+		),
+		array(
+			'id'     => 'magazine',
+			'title'  => __('Magazine', 'tnf-news-platform'),
+			'accent' => '#7c3aed',
+			'items'  => array(
+				$link('exclusive'),
+				$link('lifestyle'),
+				$link('cultural'),
+				$link('crime'),
+			),
+		),
+	);
+}
+
+/**
+ * Primary nav items for TNF chrome (flat list, same order as sections).
+ *
+ * @return array<int, array<string, string>>
+ */
+function tnf_news_nav_items(): array {
+	$items = array();
+	foreach (tnf_news_nav_sections() as $section) {
+		foreach ($section['items'] as $item) {
+			$items[] = $item;
+		}
 	}
 
 	return $items;
@@ -386,6 +445,13 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 	$videos_url   = is_string($videos_url) && $videos_url !== '' ? $videos_url : '';
 	$root_class   = $wrap_root_typography ? 'tnf-site-chrome tnf-home-news' : 'tnf-site-chrome';
 	$ticker_inner = tnf_news_breaking_ticker_inner_html();
+
+	$header_settings = function_exists('tnf_header_get_settings') ? tnf_header_get_settings() : array();
+	$banner_aid      = absint($header_settings['banner_attachment_id'] ?? 0);
+	$banner_link     = is_string($header_settings['banner_link_url'] ?? null) ? (string) $header_settings['banner_link_url'] : '';
+	$banner_src          = $banner_aid ? wp_get_attachment_image_url($banner_aid, 'large') : '';
+	$has_unified_masthead = is_string($banner_src) && $banner_src !== '';
+	$masthead_inner_class = 'tnf-shell tnf-masthead-inner' . ( $has_unified_masthead ? ' tnf-masthead-inner--unified' : '' );
 	?>
 	<div class="<?php echo esc_attr($root_class); ?>">
 		<div class="tnf-top-utility">
@@ -406,27 +472,51 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 		</div>
 
 		<header class="tnf-masthead">
-			<div class="tnf-shell tnf-masthead-inner">
-				<div class="tnf-logo-wrap">
-					<?php if (function_exists('has_custom_logo') && has_custom_logo()) : ?>
-						<div class="tnf-logo-image"><?php the_custom_logo(); ?></div>
-					<?php endif; ?>
+			<div class="<?php echo esc_attr($masthead_inner_class); ?>">
+				<?php if ($has_unified_masthead) : ?>
 					<?php
-					$site_title = trim((string) get_bloginfo('name', 'display'));
-					$tagline    = trim((string) get_bloginfo('description', 'display'));
-					if ($tagline === '' && function_exists('get_theme_mod')) {
-						// Backward compatibility: keep existing custom tagline only when WP tagline is empty.
-						$tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
-					}
+					$unified_img = wp_get_attachment_image(
+						$banner_aid,
+						'full',
+						false,
+						array(
+							'class'   => 'tnf-masthead-unified__img',
+							'loading' => 'eager',
+							'alt'     => '',
+						)
+					);
 					?>
-					<div class="tnf-brand"><?php echo esc_html($site_title); ?></div>
-					<?php if ($tagline !== '') : ?>
-					<div class="tnf-meta"><?php echo esc_html($tagline); ?></div>
-					<?php endif; ?>
-				</div>
-				<div class="tnf-head-ad" aria-hidden="true">
-					<span><?php esc_html_e('Top Banner Space', 'tnf-news-platform'); ?></span>
-				</div>
+					<div class="tnf-masthead-unified">
+						<?php if ($banner_link !== '') : ?>
+							<a class="tnf-masthead-unified__link" href="<?php echo esc_url($banner_link); ?>">
+								<?php echo $unified_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+							</a>
+						<?php else : ?>
+							<?php echo $unified_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						<?php endif; ?>
+					</div>
+				<?php else : ?>
+					<div class="tnf-logo-wrap">
+						<?php if (function_exists('has_custom_logo') && has_custom_logo()) : ?>
+							<div class="tnf-logo-image"><?php the_custom_logo(); ?></div>
+						<?php endif; ?>
+						<?php
+						$site_title = trim((string) get_bloginfo('name', 'display'));
+						$tagline    = trim((string) get_bloginfo('description', 'display'));
+						if ($tagline === '' && function_exists('get_theme_mod')) {
+							// Backward compatibility: keep existing custom tagline only when WP tagline is empty.
+							$tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
+						}
+						?>
+						<div class="tnf-brand"><?php echo esc_html($site_title); ?></div>
+						<?php if ($tagline !== '') : ?>
+						<div class="tnf-meta"><?php echo esc_html($tagline); ?></div>
+						<?php endif; ?>
+					</div>
+					<div class="tnf-head-ad" aria-hidden="true">
+						<span><?php esc_html_e('Top Banner Space', 'tnf-news-platform'); ?></span>
+					</div>
+				<?php endif; ?>
 				<div class="tnf-account-wrap">
 					<?php if (is_user_logged_in()) : ?>
 						<a class="tnf-auth-nav-btn" href="<?php echo esc_url($account_url); ?>"><?php esc_html_e('My Account', 'tnf-news-platform'); ?></a>
@@ -440,8 +530,12 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 
 		<div class="tnf-top-nav">
 			<div class="tnf-shell">
+				<div class="tnf-top-nav__actions">
 				<a class="tnf-nav-quicklink" href="<?php echo esc_url($epaper_url); ?>">
-					<?php esc_html_e('ePaper', 'tnf-news-platform'); ?>
+					<span class="tnf-nav-quicklink__icon" aria-hidden="true">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+					</span>
+					<span class="tnf-nav-quicklink__text"><?php esc_html_e('ePaper', 'tnf-news-platform'); ?></span>
 				</a>
 				<button
 					type="button"
@@ -453,9 +547,36 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 					<span class="tnf-nav-toggle__icon" aria-hidden="true"></span>
 					<span class="tnf-nav-toggle__text"><?php esc_html_e('Menu', 'tnf-news-platform'); ?></span>
 				</button>
+				</div>
 				<nav id="tnf-main-menu" class="tnf-main-menu" aria-label="<?php esc_attr_e('Sections', 'tnf-news-platform'); ?>">
-					<?php foreach (tnf_news_nav_items() as $item) : ?>
-						<a href="<?php echo esc_url($item['url']); ?>" class="<?php echo tnf_news_nav_url_is_current($item['url']) ? 'is-active' : ''; ?>"><?php echo esc_html($item['label']); ?></a>
+					<?php foreach (tnf_news_nav_sections() as $section) : ?>
+						<?php
+						$accent = isset($section['accent']) && is_string($section['accent']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $section['accent'])
+							? $section['accent']
+							: '#c41e3a';
+						$sec_id = isset($section['id']) && is_string($section['id']) ? $section['id'] : 'sec';
+						$label_id = 'tnf-nav-sec-' . preg_replace('/[^a-z0-9_-]+/i', '', $sec_id);
+						?>
+						<div
+							class="tnf-main-menu__section"
+							role="group"
+							data-section="<?php echo esc_attr($sec_id); ?>"
+							aria-labelledby="<?php echo esc_attr($label_id); ?>"
+							style="<?php echo esc_attr('--tnf-section-accent:' . $accent . ';'); ?>"
+						>
+							<div class="tnf-main-menu__section-head">
+								<span class="tnf-main-menu__section-dot" aria-hidden="true"></span>
+								<p class="tnf-main-menu__section-title" id="<?php echo esc_attr($label_id); ?>"><?php echo esc_html($section['title']); ?></p>
+							</div>
+							<div class="tnf-main-menu__section-links">
+								<?php foreach ($section['items'] as $item) : ?>
+									<a
+										class="tnf-main-menu__link <?php echo tnf_news_nav_url_is_current($item['url']) ? 'is-active' : ''; ?>"
+										href="<?php echo esc_url($item['url']); ?>"
+									><?php echo esc_html($item['label']); ?></a>
+								<?php endforeach; ?>
+							</div>
+						</div>
 					<?php endforeach; ?>
 				</nav>
 			</div>
@@ -558,24 +679,82 @@ function tnf_pdf_report_viewer_pages(int $post_id): array {
 }
 
 /**
- * Share-by-URL bar (no download). $share_url should include ?tnf_pg= when applicable.
+ * Inline SVG helpers for ePaper toolbar + social share row (icons for touch targets).
  */
-function tnf_epaper_share_bar_html(string $share_url, string $title): string {
-	$share_url   = esc_url($share_url);
-	$enc_url     = rawurlencode($share_url);
-	$enc_title   = rawurlencode($title);
-	$html  = '<div class="tnf-epaper-share" data-share-base="' . esc_attr($share_url) . '" data-share-title="' . esc_attr($title) . '">';
-	$html .= '<span class="tnf-epaper-share__label">' . esc_html__('Share', 'tnf-news-platform') . '</span>';
-	$html .= '<div class="tnf-epaper-share__links">';
-	$html .= '<a class="tnf-epaper-share__btn is-wa" href="https://wa.me/?text=' . $enc_title . '%20' . $enc_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on WhatsApp', 'tnf-news-platform') . '">WA</a>';
-	$html .= '<a class="tnf-epaper-share__btn is-fb" href="https://www.facebook.com/sharer/sharer.php?u=' . $enc_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on Facebook', 'tnf-news-platform') . '">FB</a>';
-	$html .= '<a class="tnf-epaper-share__btn is-x" href="https://twitter.com/intent/tweet?url=' . $enc_url . '&text=' . $enc_title . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on X', 'tnf-news-platform') . '">X</a>';
-	$html .= '<a class="tnf-epaper-share__btn is-li" href="https://www.linkedin.com/sharing/share-offsite/?url=' . $enc_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on LinkedIn', 'tnf-news-platform') . '">in</a>';
-	$html .= '<button type="button" class="tnf-epaper-share__btn is-clip" data-tnf-clip-toggle="1">' . esc_html__('Clip', 'tnf-news-platform') . '</button>';
-	$html .= '<button type="button" class="tnf-epaper-share__btn is-copy" data-epaper-copy="' . esc_attr($share_url) . '">' . esc_html__('Copy link', 'tnf-news-platform') . '</button>';
+function tnf_epaper_toolbar_scissors_svg(): string {
+	return '<svg class="tnf-epaper__tool-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm12 0a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+}
+
+/**
+ * @return string
+ */
+function tnf_epaper_toolbar_link_svg(): string {
+	return '<svg class="tnf-epaper__tool-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+/**
+ * Clip + copy link controls (toolbar). Scissor icon; copy shows short label for feedback.
+ *
+ * @param string $share_url Absolute URL (may include ?tnf_pg=).
+ * @param string $title     Share title text.
+ */
+function tnf_epaper_toolbar_tools_html(string $share_url, string $title): string {
+	$share_url = esc_url($share_url);
+	$clip_tip  = esc_attr__('Drag on the page to cut a shareable clip', 'tnf-news-platform');
+	$copy_tip  = esc_attr__('Copy link to this page', 'tnf-news-platform');
+	$tools_lbl = esc_attr__('Page tools', 'tnf-news-platform');
+
+	$html  = '<div class="tnf-epaper__tools" role="group" aria-label="' . $tools_lbl . '">';
+	$html .= '<button type="button" class="tnf-epaper__tool-btn is-clip" data-tnf-clip-toggle="1" aria-pressed="false" title="' . $clip_tip . '" aria-label="' . esc_attr__('Cut clip', 'tnf-news-platform') . '">';
+	$html .= '<span class="tnf-epaper__tool-icon" aria-hidden="true">' . tnf_epaper_toolbar_scissors_svg() . '</span>';
+	$html .= '</button>';
+	$html .= '<button type="button" class="tnf-epaper__tool-btn is-copy" data-epaper-copy="' . esc_attr($share_url) . '" title="' . $copy_tip . '" aria-label="' . esc_attr__('Copy page link', 'tnf-news-platform') . '">';
+	$html .= '<span class="tnf-epaper__tool-icon" aria-hidden="true">' . tnf_epaper_toolbar_link_svg() . '</span>';
+	$html .= '<span class="tnf-epaper__tool-text" data-tnf-copy-label>' . esc_html__('Link', 'tnf-news-platform') . '</span>';
+	$html .= '</button>';
+	$html .= '</div>';
+
+	return $html;
+}
+
+/**
+ * Social share controls (inline in toolbar; does not overlay the page). $share_url may include ?tnf_pg=.
+ *
+ * @param string $share_url Absolute URL.
+ * @param string $title     Share title.
+ */
+function tnf_epaper_share_social_dock_html(string $share_url, string $title): string {
+	$share_url = esc_url($share_url);
+	$enc_url   = rawurlencode($share_url);
+	$enc_title = rawurlencode($title);
+
+	$wa_icon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.1 4.9A9.94 9.94 0 0 0 12.05 2C6.56 2 2.1 6.46 2.1 11.95c0 1.76.46 3.49 1.33 5.01L2 22l5.19-1.36a9.89 9.89 0 0 0 4.84 1.24h.01c5.49 0 9.95-4.46 9.95-9.95a9.9 9.9 0 0 0-2.9-7.03Zm-7.06 15.3a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-3.08.8.83-3-.2-.31a8.2 8.2 0 0 1-1.26-4.42c0-4.55 3.7-8.25 8.26-8.25a8.2 8.2 0 0 1 5.84 2.42 8.2 8.2 0 0 1 2.41 5.84c0 4.55-3.7 8.25-8.25 8.25Zm4.52-6.16c-.25-.13-1.47-.73-1.7-.81-.23-.09-.4-.13-.56.12-.16.24-.64.81-.78.98-.14.16-.28.18-.53.06-.25-.13-1.05-.39-2-1.25-.74-.66-1.24-1.47-1.39-1.72-.14-.24-.02-.37.11-.5.11-.11.25-.28.37-.42.12-.14.16-.24.24-.41.08-.16.04-.3-.02-.42-.07-.12-.56-1.36-.77-1.86-.2-.47-.4-.41-.56-.42h-.48c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2 0 1.18.86 2.32.98 2.48.12.16 1.68 2.56 4.06 3.59.57.24 1.01.38 1.36.49.57.18 1.08.15 1.49.09.45-.07 1.47-.6 1.68-1.17.2-.58.2-1.07.14-1.17-.06-.11-.22-.17-.47-.29Z"/></svg>';
+	$fb_icon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.5-3.88 3.78-3.88 1.09 0 2.23.2 2.23.2v2.45H15.2c-1.21 0-1.59.75-1.59 1.52V12h2.7l-.43 2.89h-2.27v6.99A10 10 0 0 0 22 12Z"/></svg>';
+	$x_icon  = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.9-6.44L6.4 22H3.3l7.24-8.28L.8 2h6.4l4.43 5.85L18.9 2Zm-1.1 18h1.73L6.26 3.9H4.4L17.8 20Z"/></svg>';
+	$li_icon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M6.94 8.5H3.56V20h3.38V8.5ZM5.25 3a1.96 1.96 0 1 0 0 3.91A1.96 1.96 0 0 0 5.25 3ZM20.44 13.4c0-3.05-1.63-4.9-4.25-4.9-1.96 0-2.84 1.08-3.33 1.84V8.5H9.5V20h3.36v-5.69c0-1.5.29-2.95 2.14-2.95 1.82 0 1.85 1.7 1.85 3.05V20h3.37v-6.6Z"/></svg>';
+	$sh_icon = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+	$html  = '<div class="tnf-epaper-share tnf-epaper-share--toolbar" data-share-base="' . esc_attr($share_url) . '" data-share-title="' . esc_attr($title) . '">';
+	$html .= '<span class="tnf-epaper-share__toolbar-label">' . esc_html__('Share', 'tnf-news-platform') . '</span>';
+	$html .= '<div class="tnf-epaper-share__links" role="toolbar" aria-label="' . esc_attr__('Share this edition', 'tnf-news-platform') . '">';
+	$html .= '<button type="button" class="tnf-epaper-share__btn is-native tnf-epaper-share__btn--icon" data-tnf-share-native="1" hidden title="' . esc_attr__('Share via your device', 'tnf-news-platform') . '" aria-label="' . esc_attr__('Share…', 'tnf-news-platform') . '">' . $sh_icon . '</button>';
+	$html .= '<a class="tnf-epaper-share__btn is-wa tnf-epaper-share__btn--icon" href="https://wa.me/?text=' . $enc_title . '%20' . $enc_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on WhatsApp', 'tnf-news-platform') . '">' . $wa_icon . '</a>';
+	$html .= '<a class="tnf-epaper-share__btn is-fb tnf-epaper-share__btn--icon" href="https://www.facebook.com/sharer/sharer.php?u=' . $enc_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on Facebook', 'tnf-news-platform') . '">' . $fb_icon . '</a>';
+	$html .= '<a class="tnf-epaper-share__btn is-x tnf-epaper-share__btn--icon" href="https://twitter.com/intent/tweet?url=' . $enc_url . '&text=' . $enc_title . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on X', 'tnf-news-platform') . '">' . $x_icon . '</a>';
+	$html .= '<a class="tnf-epaper-share__btn is-li tnf-epaper-share__btn--icon" href="https://www.linkedin.com/sharing/share-offsite/?url=' . $enc_url . '" target="_blank" rel="noopener noreferrer" aria-label="' . esc_attr__('Share on LinkedIn', 'tnf-news-platform') . '">' . $li_icon . '</a>';
 	$html .= '</div></div>';
 
 	return $html;
+}
+
+/**
+ * Legacy full-width share row (embed / old markup). On singles, social icons live in the toolbar.
+ *
+ * @param string $share_url Absolute URL.
+ * @param string $title     Share title.
+ */
+function tnf_epaper_share_bar_html(string $share_url, string $title): string {
+	return tnf_epaper_share_social_dock_html($share_url, $title);
 }
 
 /**
@@ -665,7 +844,8 @@ function tnf_prepend_pdf_report_viewer(string $content): string {
 			JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES
 		);
 
-		$out .= '<div class="tnf-epaper" data-tnf-epaper="1" data-tnf-permalink="' . esc_url(get_permalink($post_id)) . '">';
+		$clip_brand = tnf_epaper_clip_brand_image_url();
+		$out .= '<div class="tnf-epaper" data-tnf-epaper="1" data-tnf-permalink="' . esc_url(get_permalink($post_id)) . '" data-tnf-epaper-date="' . esc_attr($date_s) . '"' . ( $clip_brand !== '' ? ' data-tnf-clip-brand="' . esc_url($clip_brand) . '"' : '' ) . '>';
 		$out .= '<header class="tnf-epaper__masthead">';
 		$out .= '<h1 class="tnf-epaper__title">' . esc_html($title) . '</h1>';
 		$out .= '<p class="tnf-epaper__date">' . esc_html($date_s) . '</p>';
@@ -697,10 +877,10 @@ function tnf_prepend_pdf_report_viewer(string $content): string {
 		$out .= '<button type="button" class="tnf-epaper__zoom-btn tnf-epaper__zoom-btn--value" data-tnf-zoom-reset aria-label="' . esc_attr__('Reset zoom', 'tnf-news-platform') . '"><span data-tnf-zoom-value>100%</span></button>';
 		$out .= '<button type="button" class="tnf-epaper__zoom-btn" data-tnf-zoom-in aria-label="' . esc_attr__('Zoom in', 'tnf-news-platform') . '">+</button>';
 		$out .= '</div>';
+		$out .= tnf_epaper_toolbar_tools_html($share_url, $title);
+		$out .= tnf_epaper_share_social_dock_html($share_url, $title);
 		$out .= '</div>';
 		$out .= '</div>';
-
-		$out .= tnf_epaper_share_bar_html($share_url, $title);
 
 		$out .= '<div class="tnf-epaper__body">';
 		$out .= '<aside class="tnf-epaper__sidebar" aria-label="' . esc_attr__('Page thumbnails', 'tnf-news-platform') . '">';
@@ -734,7 +914,8 @@ function tnf_prepend_pdf_report_viewer(string $content): string {
 	}
 
 	// Fallback: in-page PDF.js reader (whole-page scroll, left thumbnails, page buttons, zoom).
-	$out .= '<div class="tnf-epaper tnf-epaper--pdfjs" data-tnf-pdfjs="1" data-tnf-pdf-url="' . esc_url($url) . '" data-tnf-permalink="' . esc_url(get_permalink($post_id)) . '">';
+	$clip_brand_js = tnf_epaper_clip_brand_image_url();
+	$out .= '<div class="tnf-epaper tnf-epaper--pdfjs" data-tnf-pdfjs="1" data-tnf-pdf-url="' . esc_url($url) . '" data-tnf-permalink="' . esc_url(get_permalink($post_id)) . '" data-tnf-epaper-date="' . esc_attr($date_s) . '"' . ( $clip_brand_js !== '' ? ' data-tnf-clip-brand="' . esc_url($clip_brand_js) . '"' : '' ) . '>';
 	$out .= '<header class="tnf-epaper__masthead">';
 	$out .= '<h1 class="tnf-epaper__title">' . esc_html($title) . '</h1>';
 	$out .= '<p class="tnf-epaper__date">' . esc_html($date_s) . '</p>';
@@ -754,8 +935,9 @@ function tnf_prepend_pdf_report_viewer(string $content): string {
 	$out .= '<select class="tnf-epaper__select" data-tnf-pdfjs-zoom>';
 	$out .= '<option value="0.5">50%</option><option value="0.8">80%</option><option value="1" selected>100%</option><option value="1.25">125%</option><option value="1.5">150%</option>';
 	$out .= '</select></label>';
+	$out .= tnf_epaper_toolbar_tools_html(get_permalink($post_id), $title);
+	$out .= tnf_epaper_share_social_dock_html(get_permalink($post_id), $title);
 	$out .= '</div></div>';
-	$out .= tnf_epaper_share_bar_html(get_permalink($post_id), $title);
 	$out .= '<div class="tnf-epaper__body">';
 	$out .= '<aside class="tnf-epaper__sidebar" data-tnf-pdfjs-thumbs aria-label="' . esc_attr__('Page thumbnails', 'tnf-news-platform') . '"></aside>';
 	$out .= '<div class="tnf-epaper__stage">';
@@ -1289,6 +1471,32 @@ function tnf_news_single_share_icon_svg(string $id): string {
 }
 
 /**
+ * Public-facing author label: avoid raw email when display_name is an address.
+ *
+ * @param int $author_id User ID.
+ */
+function tnf_news_single_author_display_name(int $author_id): string {
+	if ($author_id <= 0) {
+		return '';
+	}
+	$display = (string) get_the_author_meta('display_name', $author_id);
+	if ($display !== '' && ! is_email($display)) {
+		return $display;
+	}
+	$nick = (string) get_the_author_meta('nickname', $author_id);
+	if ($nick !== '' && ! is_email($nick)) {
+		return $nick;
+	}
+	$first = (string) get_the_author_meta('first_name', $author_id);
+	$last  = (string) get_the_author_meta('last_name', $author_id);
+	$full  = trim($first . ' ' . $last);
+	if ($full !== '') {
+		return $full;
+	}
+	return __('Editorial desk', 'tnf-news-platform');
+}
+
+/**
  * News single: meta, byline + share, related grid.
  *
  * @param string $content Post content.
@@ -1325,7 +1533,7 @@ function tnf_news_content_with_category_rail(string $content): string {
 	$meta .= '</div></div>';
 
 	$author_id   = (int) get_post_field('post_author', $post_id);
-	$author_name = $author_id ? get_the_author_meta('display_name', $author_id) : '';
+	$author_name = tnf_news_single_author_display_name($author_id);
 	$author_url  = $author_id ? get_author_posts_url($author_id) : '';
 	$avatar_html = $author_id
 		? get_avatar(
@@ -1347,7 +1555,7 @@ function tnf_news_content_with_category_rail(string $content): string {
 	} elseif ($author_name !== '') {
 		$byline .= '<span class="tnf-news-byline__name">' . esc_html($author_name) . '</span>';
 	} else {
-		$byline .= '<span class="tnf-news-byline__name">' . esc_html__('Editorial', 'tnf-news-platform') . '</span>';
+		$byline .= '<span class="tnf-news-byline__name">' . esc_html__('Editorial desk', 'tnf-news-platform') . '</span>';
 	}
 	$byline .= '</div>';
 
@@ -1466,9 +1674,388 @@ function tnf_enqueue_frontend_tnf_cpt_styles(): void {
 				'tnfEpaperL10n',
 				array(
 					'copied' => __('Copied!', 'tnf-news-platform'),
+					'copyLink' => __('Copy link', 'tnf-news-platform'),
+					'linkShort' => __('Link', 'tnf-news-platform'),
+					'clipTool' => __('Cut clip', 'tnf-news-platform'),
+					'shareClip' => __('Share clip', 'tnf-news-platform'),
+					'shareClipHint' => __('Pick a network below, or copy the link to share anywhere.', 'tnf-news-platform'),
+					'openClip' => __('Open clip', 'tnf-news-platform'),
+					'cancelClip' => __('Cancel clip', 'tnf-news-platform'),
+					'open' => __('Open', 'tnf-news-platform'),
+					'close' => __('Close', 'tnf-news-platform'),
+					'viewFullEdition' => __('View full edition', 'tnf-news-platform'),
+					'clipShareContext' => __('Shared clip from this edition.', 'tnf-news-platform'),
+					'shareThisClip' => __('Share this clip', 'tnf-news-platform'),
+					'shareOnWhatsApp' => __('Share on WhatsApp', 'tnf-news-platform'),
+					'shareOnFacebook' => __('Share on Facebook', 'tnf-news-platform'),
+					'shareOnX' => __('Share on X', 'tnf-news-platform'),
+					'shareOnLinkedIn' => __('Share on LinkedIn', 'tnf-news-platform'),
 					'pdfjsWorkerSrc' => 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
 				)
 			);
 		}
 	}
+}
+
+/**
+ * Branded masthead image URL for the shared clip landing view (PNG in plugin assets).
+ *
+ * Plugins/themes may override the URL with the `tnf_epaper_clip_brand_image_url` filter.
+ */
+function tnf_epaper_clip_brand_image_url(): string {
+	$rel = 'assets/images/tnf-clip-masthead.png';
+	$abs = TNF_NEWS_PLATFORM_PATH . $rel;
+	$def = ( is_readable($abs) && is_file($abs) ) ? TNF_NEWS_PLATFORM_URL . $rel : '';
+
+	return (string) apply_filters('tnf_epaper_clip_brand_image_url', $def);
+}
+
+/**
+ * Secret for signed clip preview URLs (optional override in wp-config.php).
+ */
+function tnf_epaper_clip_og_secret(): string {
+	if (defined('TNF_EPAPER_CLIP_OG_SECRET') && is_string(TNF_EPAPER_CLIP_OG_SECRET) && TNF_EPAPER_CLIP_OG_SECRET !== '') {
+		return (string) TNF_EPAPER_CLIP_OG_SECRET;
+	}
+
+	return wp_hash('tnf_epaper_clip_og_v1');
+}
+
+/**
+ * Normalize clip rectangle (same rules as the e-paper viewer script).
+ *
+ * @return array{cx: float, cy: float, cw: float, ch: float}
+ */
+function tnf_epaper_clip_normalize_params(float $cx, float $cy, float $cw, float $ch): array {
+	$cx = max(0.0, min(1.0, $cx));
+	$cy = max(0.0, min(1.0, $cy));
+	$cw = max(0.02, min(1.0, $cw));
+	$ch = max(0.02, min(1.0, $ch));
+	if ($cx + $cw > 1.0) {
+		$cw = 1.0 - $cx;
+	}
+	if ($cy + $ch > 1.0) {
+		$ch = 1.0 - $cy;
+	}
+
+	return array(
+		'cx' => $cx,
+		'cy' => $cy,
+		'cw' => max(0.02, $cw),
+		'ch' => max(0.02, $ch),
+	);
+}
+
+/**
+ * Canonical string for clip URL signatures.
+ */
+function tnf_epaper_clip_canonical_payload(int $post_id, int $pg, float $cx, float $cy, float $cw, float $ch, int $exp): string {
+	$n = tnf_epaper_clip_normalize_params($cx, $cy, $cw, $ch);
+
+	return sprintf(
+		'v1|%d|%d|%s|%s|%s|%s|%d',
+		$post_id,
+		$pg,
+		number_format($n['cx'], 4, '.', ''),
+		number_format($n['cy'], 4, '.', ''),
+		number_format($n['cw'], 4, '.', ''),
+		number_format($n['ch'], 4, '.', ''),
+		$exp
+	);
+}
+
+/**
+ * HMAC for clip preview URL.
+ */
+function tnf_epaper_clip_sign(int $post_id, int $pg, float $cx, float $cy, float $cw, float $ch, int $exp): string {
+	$payload = tnf_epaper_clip_canonical_payload($post_id, $pg, $cx, $cy, $cw, $ch, $exp);
+
+	return hash_hmac('sha256', $payload, tnf_epaper_clip_og_secret());
+}
+
+/**
+ * Whether clip query params and signature are valid.
+ */
+function tnf_epaper_clip_verify(int $post_id, int $pg, float $cx, float $cy, float $cw, float $ch, int $exp, string $sig): bool {
+	if ($exp < time() || $exp > time() + ( 86400 * 400 )) {
+		return false;
+	}
+	if ($pg < 1) {
+		return false;
+	}
+	$expected = tnf_epaper_clip_sign($post_id, $pg, $cx, $cy, $cw, $ch, $exp);
+
+	return $sig !== '' && hash_equals($expected, $sig);
+}
+
+/**
+ * Parse clip mode query string (tnf_clip=1 + bbox) from the current request.
+ *
+ * @return array{pg: int, cx: float, cy: float, cw: float, ch: float}|null
+ */
+function tnf_epaper_parse_clip_from_get(): ?array {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only; output meta only.
+	if (! isset($_GET['tnf_clip']) || (string) wp_unslash((string) $_GET['tnf_clip']) !== '1') {
+		return null;
+	}
+
+	$pg = isset($_GET['tnf_pg']) ? absint((string) wp_unslash((string) $_GET['tnf_pg'])) : 0;
+	if ($pg < 1) {
+		return null;
+	}
+
+	if (! isset($_GET['tnf_cx'], $_GET['tnf_cy'], $_GET['tnf_cw'], $_GET['tnf_ch'])) {
+		return null;
+	}
+
+	$cx = (float) wp_unslash((string) $_GET['tnf_cx']);
+	$cy = (float) wp_unslash((string) $_GET['tnf_cy']);
+	$cw = (float) wp_unslash((string) $_GET['tnf_cw']);
+	$ch = (float) wp_unslash((string) $_GET['tnf_ch']);
+	if (is_nan($cx) || is_nan($cy) || is_nan($cw) || is_nan($ch)) {
+		return null;
+	}
+	if ($cw <= 0.0 || $ch <= 0.0) {
+		return null;
+	}
+
+	return array(
+		'pg' => $pg,
+		'cx' => $cx,
+		'cy' => $cy,
+		'cw' => $cw,
+		'ch' => $ch,
+	);
+}
+
+/**
+ * Absolute signed REST URL that returns a JPEG of the clip (for og:image).
+ *
+ * @param array{pg: int, cx: float, cy: float, cw: float, ch: float} $clip Clip params.
+ */
+function tnf_epaper_clip_signed_image_url(int $post_id, array $clip): string {
+	$n = tnf_epaper_clip_normalize_params((float) $clip['cx'], (float) $clip['cy'], (float) $clip['cw'], (float) $clip['ch']);
+	$ttl = (int) apply_filters('tnf_epaper_clip_sig_ttl', 90 * DAY_IN_SECONDS);
+	$exp = time() + max((int) DAY_IN_SECONDS, $ttl);
+	$sig = tnf_epaper_clip_sign($post_id, (int) $clip['pg'], $n['cx'], $n['cy'], $n['cw'], $n['ch'], $exp);
+
+	return add_query_arg(
+		array(
+			'pg'  => (int) $clip['pg'],
+			'cx'  => (float) number_format($n['cx'], 4, '.', ''),
+			'cy'  => (float) number_format($n['cy'], 4, '.', ''),
+			'cw'  => (float) number_format($n['cw'], 4, '.', ''),
+			'ch'  => (float) number_format($n['ch'], 4, '.', ''),
+			'exp' => $exp,
+			'sig' => $sig,
+		),
+		rest_url('tnf/v1/pdf-report/' . $post_id . '/clip-og')
+	);
+}
+
+/**
+ * Signed clip preview URL for the current singular request, or empty string.
+ */
+function tnf_epaper_clip_og_url_for_request(): string {
+	if (! is_singular('tnf_pdf_report')) {
+		return '';
+	}
+
+	$post_id = (int) get_queried_object_id();
+	if ($post_id <= 0) {
+		return '';
+	}
+
+	$clip = tnf_epaper_parse_clip_from_get();
+	if ($clip === null) {
+		return '';
+	}
+
+	return tnf_epaper_clip_signed_image_url($post_id, $clip);
+}
+
+/**
+ * Build JPEG bytes for a clip region (cached under uploads).
+ *
+ * @return string|WP_Error
+ */
+function tnf_epaper_clip_build_jpeg(int $post_id, int $pg, float $cx, float $cy, float $cw, float $ch) {
+	$n = tnf_epaper_clip_normalize_params($cx, $cy, $cw, $ch);
+
+	$pages = tnf_pdf_report_viewer_pages($post_id);
+	$url   = '';
+	foreach ($pages as $row) {
+		if ((int) $row['page'] === $pg) {
+			$url = $row['url'];
+			break;
+		}
+	}
+	if ($url === '') {
+		return new WP_Error('no_page', __('Page image not found', 'tnf-news-platform'), array('status' => 404));
+	}
+
+	$upload = wp_upload_dir();
+	if (! empty($upload['error'])) {
+		return new WP_Error('upload_dir', (string) $upload['error'], array('status' => 500));
+	}
+
+	$cache_key = hash(
+		'sha256',
+		implode(
+			'|',
+			array(
+				(string) $post_id,
+				(string) $pg,
+				number_format($n['cx'], 4, '.', ''),
+				number_format($n['cy'], 4, '.', ''),
+				number_format($n['cw'], 4, '.', ''),
+				number_format($n['ch'], 4, '.', ''),
+				$url,
+			)
+		)
+	);
+	$cache_dir  = trailingslashit($upload['basedir']) . 'tnf-epaper-clip-cache';
+	$cache_file = '';
+	if (wp_mkdir_p($cache_dir)) {
+		$cache_file = trailingslashit($cache_dir) . $cache_key . '.jpg';
+		if (is_readable($cache_file) && ( time() - (int) filemtime($cache_file) ) < 7 * DAY_IN_SECONDS) {
+			$cached = file_get_contents($cache_file);
+			if (is_string($cached) && $cached !== '') {
+				return $cached;
+			}
+		}
+	}
+
+	$tmp = download_url(esc_url_raw($url), 60);
+	if (is_wp_error($tmp)) {
+		return $tmp;
+	}
+
+	$editor = wp_get_image_editor($tmp);
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+	@unlink($tmp);
+	if (is_wp_error($editor)) {
+		return $editor;
+	}
+
+	$editor->set_quality(82);
+
+	$size = $editor->get_size();
+	if (! is_array($size) || empty($size['width']) || empty($size['height'])) {
+		return new WP_Error('bad_image', __('Could not read image size', 'tnf-news-platform'), array('status' => 422));
+	}
+
+	$iw = (int) $size['width'];
+	$ih = (int) $size['height'];
+
+	$src_x = (int) floor($n['cx'] * $iw);
+	$src_y = (int) floor($n['cy'] * $ih);
+	$src_w = max(1, (int) round($n['cw'] * $iw));
+	$src_h = max(1, (int) round($n['ch'] * $ih));
+	$src_x = min($src_x, max(0, $iw - 1));
+	$src_y = min($src_y, max(0, $ih - 1));
+	$src_w = min($src_w, $iw - $src_x);
+	$src_h = min($src_h, $ih - $src_y);
+
+	$cropped = $editor->crop($src_x, $src_y, $src_w, $src_h);
+	if (is_wp_error($cropped)) {
+		return $cropped;
+	}
+
+	$dims   = $editor->get_size();
+	$ow     = isset($dims['width']) ? (int) $dims['width'] : 0;
+	$oh     = isset($dims['height']) ? (int) $dims['height'] : 0;
+	$min_s  = (int) min($ow, $oh);
+	$max_s  = (int) max($ow, $oh);
+	if ($min_s > 0 && $min_s < 200) {
+		$scale = 200 / $min_s;
+		$nw    = (int) min(1200, ceil($ow * $scale));
+		$nh    = (int) min(1200, ceil($oh * $scale));
+		$editor->resize($nw, $nh, false);
+	} elseif ($max_s > 1200) {
+		$editor->resize(1200, 1200, false);
+	}
+
+	$out_path = trailingslashit(get_temp_dir()) . 'tnf-clip-' . wp_generate_password(16, false, false) . '.jpg';
+	$saved    = $editor->save($out_path, 'image/jpeg');
+	if (is_wp_error($saved)) {
+		return $saved;
+	}
+
+	$path = isset($saved['path']) ? (string) $saved['path'] : '';
+	if ($path === '' || ! is_readable($path)) {
+		return new WP_Error('save', __('Could not save clip image', 'tnf-news-platform'), array('status' => 500));
+	}
+
+	$bytes = file_get_contents($path);
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+	@unlink($path);
+	if (! is_string($bytes) || $bytes === '') {
+		return new WP_Error('read', __('Could not read clip image', 'tnf-news-platform'), array('status' => 500));
+	}
+
+	if ($cache_file !== '') {
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@file_put_contents($cache_file, $bytes);
+	}
+
+	return $bytes;
+}
+
+/**
+ * Open Graph / Twitter image for clip URLs when no SEO plugin manages tags.
+ */
+function tnf_epaper_clip_social_preview_meta(): void {
+	if (is_admin()) {
+		return;
+	}
+	if (defined('WPSEO_VERSION') || defined('RANK_MATH_VERSION')) {
+		return;
+	}
+	$url = tnf_epaper_clip_og_url_for_request();
+	if ($url === '') {
+		return;
+	}
+
+	$title = get_the_title((int) get_queried_object_id());
+
+	echo '<meta property="og:image" content="' . esc_url($url) . "\" />\n";
+	echo '<meta property="og:image:secure_url" content="' . esc_url($url) . "\" />\n";
+	echo '<meta name="twitter:image" content="' . esc_url($url) . "\" />\n";
+	echo "<meta name=\"twitter:card\" content=\"summary_large_image\" />\n";
+	if ($title !== '') {
+		echo '<meta property="og:image:alt" content="' . esc_attr($title) . "\" />\n";
+	}
+}
+
+/**
+ * Yoast SEO: use clip JPEG when viewing a clip share URL.
+ *
+ * @param string $url Default Open Graph image URL.
+ */
+function tnf_epaper_clip_wpseo_opengraph_image($url): string {
+	$url = is_string($url) ? $url : '';
+	if (! defined('WPSEO_VERSION')) {
+		return $url;
+	}
+
+	$clip_url = tnf_epaper_clip_og_url_for_request();
+
+	return $clip_url !== '' ? $clip_url : $url;
+}
+
+/**
+ * Rank Math: use clip JPEG when viewing a clip share URL.
+ *
+ * @param string $url Default Facebook / OG image URL.
+ */
+function tnf_epaper_clip_rank_math_facebook_image($url): string {
+	$url = is_string($url) ? $url : '';
+	if (! defined('RANK_MATH_VERSION')) {
+		return $url;
+	}
+
+	$clip_url = tnf_epaper_clip_og_url_for_request();
+
+	return $clip_url !== '' ? $clip_url : $url;
 }

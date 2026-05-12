@@ -314,71 +314,60 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 			</main>
 
 			<aside class="tnf-side-col">
+				<?php
+				$trend = new WP_Query(
+					array(
+						'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
+						'post_status'    => 'publish',
+						'posts_per_page' => 8,
+						'orderby'        => 'comment_count',
+						'order'          => 'DESC',
+					)
+				);
+				if ( $trend->have_posts() ) :
+					?>
 				<section class="tnf-card tnf-side-widget">
 					<div class="tnf-cat-head"><h3><?php esc_html_e( 'Trending News', 'twentytwentyfive' ); ?></h3></div>
-					<?php
-					$trend = new WP_Query(
-						array(
-							'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-							'post_status'    => 'publish',
-							'posts_per_page' => 8,
-							'orderby'        => 'comment_count',
-							'order'          => 'DESC',
-						)
-					);
-					if ( $trend->have_posts() ) :
-						echo '<ul>';
+					<ul>
+						<?php
 						while ( $trend->have_posts() ) :
 							$trend->the_post();
 							echo '<li><a class="tnf-list-thumb" href="' . esc_url( get_permalink() ) . '"><img src="' . esc_url( twentytwentyfive_tnf_news_thumbnail_url( (int) get_the_ID() ) ) . '" alt="' . esc_attr( get_the_title() ) . '" loading="lazy" /><span>' . esc_html( get_the_title() ) . '</span></a></li>';
 						endwhile;
-						echo '</ul>';
 						wp_reset_postdata();
-					endif;
-					?>
+						?>
+					</ul>
 				</section>
+					<?php
+				endif;
 
+				$top = new WP_Query(
+					array(
+						'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
+						'post_status'    => 'publish',
+						'posts_per_page' => 6,
+						'orderby'        => 'date',
+						'order'          => 'DESC',
+					)
+				);
+				if ( $top->have_posts() ) :
+					?>
 				<section class="tnf-card tnf-side-widget">
 					<div class="tnf-cat-head"><h3><?php esc_html_e( 'Top News', 'twentytwentyfive' ); ?></h3></div>
-					<?php
-					$top = new WP_Query(
-						array(
-							'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-							'post_status'    => 'publish',
-							'posts_per_page' => 6,
-							'orderby'        => 'date',
-							'order'          => 'DESC',
-						)
-					);
-					if ( $top->have_posts() ) :
-						echo '<ul>';
+					<ul>
+						<?php
 						while ( $top->have_posts() ) :
 							$top->the_post();
 							echo '<li><a class="tnf-list-thumb" href="' . esc_url( get_permalink() ) . '"><img src="' . esc_url( twentytwentyfive_tnf_news_thumbnail_url( (int) get_the_ID() ) ) . '" alt="' . esc_attr( get_the_title() ) . '" loading="lazy" /><span>' . esc_html( get_the_title() ) . '</span></a></li>';
 						endwhile;
-						echo '</ul>';
 						wp_reset_postdata();
-					endif;
-					?>
+						?>
+					</ul>
 				</section>
+					<?php
+				endif;
+				?>
 
-				<section class="tnf-card tnf-side-widget">
-					<div class="tnf-cat-head"><h3><?php esc_html_e( 'Weather Forecast', 'twentytwentyfive' ); ?></h3></div>
-					<div class="tnf-weather-box">
-						<p><?php esc_html_e( 'Agra weather overview', 'twentytwentyfive' ); ?></p>
-						<a href="https://world-weather.info/forecast/india/agra/14days/" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'View 14-day forecast', 'twentytwentyfive' ); ?></a>
-					</div>
-				</section>
-
-				<section class="tnf-card tnf-side-widget">
-					<div class="tnf-cat-head"><h3><?php esc_html_e( 'User Poll', 'twentytwentyfive' ); ?></h3></div>
-					<div class="tnf-poll-box">
-						<p><?php esc_html_e( 'क्या आप भारत को एक हिन्दू राष्ट्र बनाना चाहते हैं?', 'twentytwentyfive' ); ?></p>
-						<label><input type="radio" name="tnf_poll_vote" disabled /> <?php esc_html_e( 'हाँ', 'twentytwentyfive' ); ?></label>
-						<label><input type="radio" name="tnf_poll_vote" disabled /> <?php esc_html_e( 'नहीं', 'twentytwentyfive' ); ?></label>
-						<label><input type="radio" name="tnf_poll_vote" disabled /> <?php esc_html_e( 'पता नहीं', 'twentytwentyfive' ); ?></label>
-					</div>
-				</section>
 			</aside>
 		</div>
 	</div>

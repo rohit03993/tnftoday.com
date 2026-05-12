@@ -10,6 +10,15 @@ if (! defined('ABSPATH')) {
 }
 
 /**
+ * REST arg helper for clip bbox floats.
+ *
+ * @param mixed $v Raw value.
+ */
+function tnf_rest_sanitize_clip_float($v): float {
+	return (float) $v;
+}
+
+/**
  * Register REST routes.
  */
 function tnf_register_rest_routes(): void {
@@ -125,6 +134,26 @@ function tnf_register_rest_routes(): void {
 			'methods'             => 'POST',
 			'callback'            => 'tnf_rest_internal_pdf_job_complete',
 			'permission_callback' => '__return_true',
+		)
+	);
+
+	register_rest_route(
+		$ns,
+		'/pdf-report/(?P<id>\d+)/clip-og',
+		array(
+			'methods'             => 'GET',
+			'callback'            => 'tnf_rest_pdf_report_clip_og',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'id'   => array('sanitize_callback' => 'absint'),
+				'pg'   => array('sanitize_callback' => 'absint'),
+				'cx'   => array('sanitize_callback' => 'tnf_rest_sanitize_clip_float'),
+				'cy'   => array('sanitize_callback' => 'tnf_rest_sanitize_clip_float'),
+				'cw'   => array('sanitize_callback' => 'tnf_rest_sanitize_clip_float'),
+				'ch'   => array('sanitize_callback' => 'tnf_rest_sanitize_clip_float'),
+				'exp'  => array('sanitize_callback' => 'absint'),
+				'sig'  => array('sanitize_callback' => 'sanitize_text_field'),
+			),
 		)
 	);
 
@@ -524,4 +553,81 @@ function tnf_rest_submissions_reject(WP_REST_Request $req): WP_REST_Response|WP_
 	}
 
 	return new WP_REST_Response(array('id' => (int) $req['id'], 'status' => 'rejected'));
+}
+
+/**
+ * Signed JPEG for e-paper clip previews (Open Graph / social crawlers).
+ *
+ * @param WP_REST_Request $req Request.
+ */
+function tnf_rest_pdf_report_clip_og(WP_REST_Request $req): WP_REST_Response|WP_Error {
+	$post_id = (int) $req['id'];
+	$post     = get_post($post_id);
+	if (! $post || 'tnf_pdf_report' !== $post->post_type || 'publish' !== $post->post_status) {
+		return new WP_Error('not_found', __('Not found', 'tnf-news-platform'), array('status' => 404));
+	}
+
+	$pg  = (int) $req->get_param('pg');
+	$cx  = (float) $req->get_param('cx');
+	$cy  = (float) $req->get_param('cy');
+	$cw  = (float) $req->get_param('cw');
+	$ch  = (float) $req->get_param('ch');
+	$exp = (int) $req->get_param('exp');
+	$sig = sanitize_text_field((string) $req->get_param('sig'));
+
+	if ($pg < 1 || $sig === '' || ! function_exists('tnf_epaper_clip_verify') || ! tnf_epaper_clip_verify($post_id, $pg, $cx, $cy, $cw, $ch, $exp, $sig)) {
+		return new WP_Error('forbidden', __('Invalid clip link', 'tnf-news-platform'), array('status' => 403));
+	}
+
+	if (! function_exists('tnf_epaper_clip_build_jpeg')) {
+		return new WP_Error('server', __('Clip preview unavailable', 'tnf-news-platform'), array('status' => 500));
+	}
+
+	$jpeg = tnf_epaper_clip_build_jpeg($post_id, $pg, $cx, $cy, $cw, $ch);
+	if (is_wp_error($jpeg)) {
+		return $jpeg;
+	}
+
+	$response = new WP_REST_Response($jpeg, 200);
+	$response->header('Content-Type', 'image/jpeg');
+	$response->header('Cache-Control', 'public, max-age=86400');
+
+	return $response;
+}
+
+/**
+ * Serve raw JPEG from REST for clip-og route (avoid JSON encoding the body).
+ *
+ * @param bool            $served  Whether the request was served.
+ * @param WP_REST_Response|mixed $result Response object.
+ * @param WP_REST_Request $request Request.
+ * @param WP_REST_Server  $server  Server.
+ */
+function tnf_rest_pre_serve_pdf_clip_og(bool $served, $result, WP_REST_Request $request, WP_REST_Server $server): bool {
+	if ($served || ! ( $result instanceof WP_REST_Response )) {
+		return $served;
+	}
+
+	$route = (string) $request->get_route();
+	if (! preg_match('#^/tnf/v1/pdf-report/\d+/clip-og$#', $route)) {
+		return $served;
+	}
+
+	$data = $result->get_data();
+	if (! is_string($data) || $data === '') {
+		return $served;
+	}
+
+	status_header($result->get_status());
+	foreach ($result->get_headers() as $name => $value) {
+		$values = is_array($value) ? $value : array( $value );
+		foreach ($values as $v) {
+			header(sprintf('%s: %s', $name, $v), false);
+		}
+	}
+
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- binary JPEG.
+	echo $data;
+
+	return true;
 }

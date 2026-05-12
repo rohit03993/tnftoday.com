@@ -120,7 +120,7 @@
 @media (max-width: 900px) {
 	.tnf-archive-hub-hero {
 		margin-bottom: 1rem;
-		padding: 1rem 0.9rem;
+		padding: 1rem max(0.9rem, env(safe-area-inset-right)) 1rem max(0.9rem, env(safe-area-inset-left));
 		border-radius: 12px;
 	}
 

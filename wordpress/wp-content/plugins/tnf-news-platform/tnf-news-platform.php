@@ -26,7 +26,9 @@ require_once TNF_NEWS_PLATFORM_PATH . 'includes/services/class-pdf-service-clien
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/pdf-service-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/services/class-push-notifications.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/pdf-integration.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/header-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/footer-settings.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/legal-pages.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-ui.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-display.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-auth.php';
@@ -49,6 +51,7 @@ function tnf_news_platform_bootstrap(): void {
 	add_action('init', 'tnf_register_admin_ui', 9);
 	add_action('init', 'tnf_register_frontend_auth', 9);
 	add_action('rest_api_init', 'tnf_register_rest_routes');
+	add_filter('rest_pre_serve_request', 'tnf_rest_pre_serve_pdf_clip_og', 10, 4);
 	add_action('transition_post_status', 'tnf_on_transition_publish_notification', 10, 3);
 }
 
@@ -60,6 +63,9 @@ register_activation_hook(__FILE__, 'tnf_news_platform_activate');
 function tnf_news_platform_activate(): void {
 	tnf_register_post_types();
 	tnf_register_roles();
+	if (function_exists('tnf_ensure_legal_pages')) {
+		tnf_ensure_legal_pages();
+	}
 	update_option('tnf_rewrite_rules_version', 'news-root-permalink-1');
 	flush_rewrite_rules();
 }

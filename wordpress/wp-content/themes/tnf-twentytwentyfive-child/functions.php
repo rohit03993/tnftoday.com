@@ -28,6 +28,18 @@ function tnf_child_theme_support(): void {
 add_action('after_setup_theme', 'tnf_child_theme_support', 11);
 
 /**
+ * Notched phones: allow CSS env(safe-area-inset-*) in header/footer padding.
+ */
+function tnf_child_viewport_meta($viewport) {
+	$viewport = (string) $viewport;
+	if (strpos($viewport, 'viewport-fit') !== false) {
+		return $viewport;
+	}
+	return $viewport . ', viewport-fit=cover';
+}
+add_filter('wp_meta_viewport', 'tnf_child_viewport_meta');
+
+/**
  * Customizer: logo height + optional masthead line (Site Identity section).
  */
 function tnf_child_customize_register(WP_Customize_Manager $wp_customize): void {
