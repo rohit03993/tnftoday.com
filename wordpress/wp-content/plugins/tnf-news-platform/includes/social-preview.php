@@ -180,6 +180,37 @@ function tnf_pdf_report_social_og_upload_paths(int $post_id): ?array {
 }
 
 /**
+ * Cached social JPEG must be WhatsApp-sized (reject old logo-sized 641×337 files).
+ */
+function tnf_social_preview_og_file_is_whatsapp_ready(string $file): bool {
+	if ($file === '' || ! is_readable($file)) {
+		return false;
+	}
+
+	$info = function_exists('wp_getimagesize') ? wp_getimagesize($file) : @getimagesize($file);
+	if (! is_array($info) || empty($info[0]) || empty($info[1])) {
+		return false;
+	}
+
+	$w = (int) $info[0];
+	$h = (int) $info[1];
+
+	// Cropped output is 1200×630; logo fallback was ~641×337.
+	return $w >= 900 && $h >= 450;
+}
+
+/**
+ * Public URL for a social og file, with cache-bust query arg for WhatsApp.
+ */
+function tnf_social_preview_og_public_url_with_bust(string $url, string $file): string {
+	if ($url === '' || $file === '' || ! is_readable($file)) {
+		return $url;
+	}
+
+	return add_query_arg('v', (string) (int) filemtime($file), $url);
+}
+
+/**
  * Build and save og:image under uploads; return public HTTPS URL for WhatsApp.
  */
 function tnf_pdf_report_social_og_public_url(int $post_id): string {
@@ -193,19 +224,27 @@ function tnf_pdf_report_social_og_public_url(int $post_id): string {
 		return '';
 	}
 
-	$sig         = (string) get_post_meta($post_id, '_tnf_pdf_last_sig', true);
-	$stored_sig  = (string) get_post_meta($post_id, '_tnf_social_og_sig', true);
-	$have_fresh  = is_readable($paths['file'])
+	$sig        = (string) get_post_meta($post_id, '_tnf_pdf_last_sig', true);
+	$stored_sig = (string) get_post_meta($post_id, '_tnf_social_og_sig', true);
+
+	if (is_readable($paths['file']) && ! tnf_social_preview_og_file_is_whatsapp_ready($paths['file'])) {
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@unlink($paths['file']);
+		delete_post_meta($post_id, '_tnf_social_og_sig');
+	}
+
+	$have_fresh = is_readable($paths['file'])
+		&& tnf_social_preview_og_file_is_whatsapp_ready($paths['file'])
 		&& ( time() - (int) filemtime($paths['file']) ) < 7 * DAY_IN_SECONDS
 		&& ( $sig === '' || $stored_sig === $sig );
 
 	if ($have_fresh && tnf_social_preview_is_public_image_url($paths['url'])) {
-		return $paths['url'];
+		return tnf_social_preview_og_public_url_with_bust($paths['url'], $paths['file']);
 	}
 
 	$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
 	if (is_wp_error($jpeg) || ! is_string($jpeg) || $jpeg === '') {
-		return ( is_readable($paths['file']) && tnf_social_preview_is_public_image_url($paths['url']) ) ? $paths['url'] : '';
+		return '';
 	}
 
 	$dir = dirname($paths['file']);
@@ -218,11 +257,22 @@ function tnf_pdf_report_social_og_public_url(int $post_id): string {
 		return '';
 	}
 
+	if (! tnf_social_preview_og_file_is_whatsapp_ready($paths['file'])) {
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@unlink($paths['file']);
+
+		return '';
+	}
+
 	if ($sig !== '') {
 		update_post_meta($post_id, '_tnf_social_og_sig', $sig);
 	}
 
-	return tnf_social_preview_is_public_image_url($paths['url']) ? $paths['url'] : '';
+	if (! tnf_social_preview_is_public_image_url($paths['url'])) {
+		return '';
+	}
+
+	return tnf_social_preview_og_public_url_with_bust($paths['url'], $paths['file']);
 }
 
 /**
