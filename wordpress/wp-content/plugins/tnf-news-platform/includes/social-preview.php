@@ -9,7 +9,7 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
-add_action('wp_head', 'tnf_social_preview_output_meta', 2);
+add_action('wp_head', 'tnf_social_preview_output_meta', 1);
 add_filter('wpseo_opengraph_image', 'tnf_social_preview_filter_seo_image', 99);
 add_filter('wpseo_twitter_image', 'tnf_social_preview_filter_seo_image', 99);
 add_filter('rank_math/opengraph/facebook/image', 'tnf_social_preview_filter_seo_image', 99);
@@ -83,22 +83,65 @@ function tnf_social_preview_default_image_url(): string {
 	return '';
 }
 
+/** WhatsApp drops previews when og:image is larger than ~300 KB. */
+const TNF_SOCIAL_PREVIEW_MAX_IMAGE_BYTES = 300000;
+
 /**
- * Featured image URL when it is crawler-safe.
+ * File size in bytes for a local attachment (0 if unknown).
+ */
+function tnf_social_preview_attachment_bytes(int $attachment_id): int {
+	if ($attachment_id <= 0) {
+		return 0;
+	}
+
+	$path = get_attached_file($attachment_id);
+	if (! is_string($path) || $path === '' || ! is_readable($path)) {
+		return 0;
+	}
+
+	return (int) filesize($path);
+}
+
+/**
+ * Featured image URL when it is crawler-safe (prefers sizes under WhatsApp limit).
  */
 function tnf_social_preview_featured_image_url(int $post_id): string {
 	if ($post_id <= 0 || ! has_post_thumbnail($post_id)) {
 		return '';
 	}
 
-	foreach (array('large', 'medium_large', 'full') as $size) {
+	$thumb_id = (int) get_post_thumbnail_id($post_id);
+	$sizes    = array('medium_large', 'large', 'full');
+
+	foreach ($sizes as $size) {
 		$url = get_the_post_thumbnail_url($post_id, $size);
-		if (is_string($url) && $url !== '' && tnf_social_preview_is_public_image_url($url)) {
-			return $url;
+		if (! is_string($url) || $url === '' || ! tnf_social_preview_is_public_image_url($url)) {
+			continue;
 		}
+
+		if ('full' === $size && tnf_social_preview_attachment_bytes($thumb_id) > TNF_SOCIAL_PREVIEW_MAX_IMAGE_BYTES) {
+			continue;
+		}
+
+		return $url;
 	}
 
 	return '';
+}
+
+/**
+ * PDF share image: compressed page-og JPEG (WhatsApp-friendly) when available.
+ */
+function tnf_social_preview_pdf_image_url(int $post_id): string {
+	if ($post_id <= 0) {
+		return '';
+	}
+
+	if (function_exists('tnf_pdf_report_can_serve_page_og') && tnf_pdf_report_can_serve_page_og($post_id)) {
+		return tnf_pdf_report_page_og_rest_url($post_id);
+	}
+
+	return tnf_social_preview_featured_image_url($post_id);
 }
 
 /**
@@ -130,30 +173,14 @@ function tnf_social_preview_image_url(int $post_id): string {
 		return '';
 	}
 
-	$featured = tnf_social_preview_featured_image_url($post_id);
-	if ($featured !== '') {
-		$url = $featured;
-	} elseif ('tnf_pdf_report' === $post->post_type) {
-		$aid = (int) get_post_meta($post_id, 'tnf_pdf_attachment_id', true);
-		if ($aid > 0 && function_exists('tnf_pdf_attachment_preview_image_url')) {
-			$preview = tnf_pdf_attachment_preview_image_url($aid);
-			if (is_string($preview) && $preview !== '' && tnf_social_preview_is_public_image_url($preview)) {
-				$url = $preview;
-			} elseif (tnf_pdf_report_can_serve_page_og($post_id)) {
-				$url = tnf_pdf_report_page_og_rest_url($post_id);
-			} else {
-				$url = '';
-			}
-		} elseif (tnf_pdf_report_can_serve_page_og($post_id)) {
-			$url = tnf_pdf_report_page_og_rest_url($post_id);
-		} else {
-			$url = '';
-		}
+	$url = '';
+	if ('tnf_pdf_report' === $post->post_type) {
+		$url = tnf_social_preview_pdf_image_url($post_id);
 	} elseif ('tnf_video' === $post->post_type && function_exists('tnf_video_card_thumbnail_url')) {
 		$thumb = tnf_video_card_thumbnail_url($post_id);
 		$url   = ( is_string($thumb) && $thumb !== '' && tnf_social_preview_is_public_image_url($thumb) ) ? $thumb : '';
 	} else {
-		$url = '';
+		$url = tnf_social_preview_featured_image_url($post_id);
 	}
 
 	if ($url === '' || ! tnf_social_preview_is_public_image_url($url)) {
@@ -217,44 +244,142 @@ function tnf_social_preview_filter_seo_image($url): string {
 }
 
 /**
- * Output og:image meta when no SEO plugin handles social tags.
+ * Description text for link previews (WhatsApp requires og:description).
+ */
+function tnf_social_preview_description_for_post(int $post_id): string {
+	if ($post_id <= 0) {
+		return '';
+	}
+
+	$excerpt = get_the_excerpt($post_id);
+	$text    = is_string($excerpt) ? trim(wp_strip_all_tags($excerpt)) : '';
+	if ($text !== '') {
+		return wp_trim_words($text, 40, '…');
+	}
+
+	$post = get_post($post_id);
+	if ($post instanceof WP_Post && $post->post_content !== '') {
+		$text = trim(wp_strip_all_tags($post->post_content));
+		if ($text !== '') {
+			return wp_trim_words($text, 40, '…');
+		}
+	}
+
+	$title = get_the_title($post_id);
+
+	return is_string($title) ? trim($title) : '';
+}
+
+/**
+ * Width, height, MIME for og:image (helps WhatsApp accept the preview).
+ *
+ * @return array{width: int, height: int, type: string}
+ */
+function tnf_social_preview_image_dimensions(string $url): array {
+	$empty = array(
+		'width'  => 0,
+		'height' => 0,
+		'type'   => 'image/jpeg',
+	);
+
+	$url = trim($url);
+	if ($url === '') {
+		return $empty;
+	}
+
+	$parts = wp_parse_url($url);
+	$home  = wp_parse_url(home_url('/'));
+	if (is_array($parts) && is_array($home) && ! empty($parts['path']) && ! empty($home['host'])
+		&& isset($parts['host']) && strtolower((string) $parts['host']) === strtolower((string) $home['host'])
+	) {
+		$rel = ltrim((string) $parts['path'], '/');
+		if (str_starts_with($rel, 'wp-content/uploads/')) {
+			$upload = wp_upload_dir();
+			$local  = trailingslashit($upload['basedir']) . substr($rel, strlen('wp-content/uploads/'));
+			if (is_readable($local)) {
+				$info = function_exists('wp_getimagesize') ? wp_getimagesize($local) : @getimagesize($local);
+				if (is_array($info) && ! empty($info[0]) && ! empty($info[1])) {
+					return array(
+						'width'  => (int) $info[0],
+						'height' => (int) $info[1],
+						'type'   => ! empty($info['mime']) ? (string) $info['mime'] : 'image/jpeg',
+					);
+				}
+			}
+		}
+	}
+
+	if (preg_match('#/pdf-report/\d+/page-og#', $url)) {
+		return array(
+			'width'  => 1200,
+			'height' => 630,
+			'type'   => 'image/jpeg',
+		);
+	}
+
+	return $empty;
+}
+
+/**
+ * Output Open Graph meta for WhatsApp / Facebook (when no SEO plugin handles tags).
  */
 function tnf_social_preview_output_meta(): void {
 	if (defined('WPSEO_VERSION') || defined('RANK_MATH_VERSION')) {
 		return;
 	}
 
-	$url = tnf_social_preview_image_url_for_request();
-	if ($url === '') {
+	if (! is_singular(tnf_social_preview_post_types())) {
 		return;
 	}
 
 	$post_id = (int) get_queried_object_id();
+	$url     = tnf_social_preview_image_url_for_request();
 	$title   = $post_id > 0 ? get_the_title($post_id) : '';
+	$desc    = tnf_social_preview_description_for_post($post_id);
+	$site    = get_bloginfo('name');
+	$permalink = $post_id > 0 ? get_permalink($post_id) : '';
+
+	if ($url === '') {
+		return;
+	}
+
+	if ($title !== '') {
+		echo '<meta property="og:title" content="' . esc_attr($title) . "\" />\n";
+		echo '<meta name="twitter:title" content="' . esc_attr($title) . "\" />\n";
+	}
+
+	if ($desc !== '') {
+		echo '<meta property="og:description" content="' . esc_attr($desc) . "\" />\n";
+		echo '<meta name="twitter:description" content="' . esc_attr($desc) . "\" />\n";
+	}
+
+	if (is_string($site) && $site !== '') {
+		echo '<meta property="og:site_name" content="' . esc_attr($site) . "\" />\n";
+	}
+
+	if (is_string($permalink) && $permalink !== '') {
+		echo '<meta property="og:url" content="' . esc_url($permalink) . "\" />\n";
+	}
+
+	echo "<meta property=\"og:type\" content=\"article\" />\n";
+	echo '<meta property="og:locale" content="' . esc_attr(str_replace('_', '-', (string) get_locale())) . "\" />\n";
 
 	echo '<meta property="og:image" content="' . esc_url($url) . "\" />\n";
 	echo '<meta property="og:image:secure_url" content="' . esc_url($url) . "\" />\n";
 	echo '<meta name="twitter:image" content="' . esc_url($url) . "\" />\n";
 	echo "<meta name=\"twitter:card\" content=\"summary_large_image\" />\n";
-	if ($title !== '') {
-		echo '<meta property="og:image:alt" content="' . esc_attr($title) . "\" />\n";
+
+	$dims = tnf_social_preview_image_dimensions($url);
+	if ($dims['width'] > 0 && $dims['height'] > 0) {
+		echo '<meta property="og:image:width" content="' . esc_attr((string) $dims['width']) . "\" />\n";
+		echo '<meta property="og:image:height" content="' . esc_attr((string) $dims['height']) . "\" />\n";
+	}
+	if ($dims['type'] !== '') {
+		echo '<meta property="og:image:type" content="' . esc_attr($dims['type']) . "\" />\n";
 	}
 
-	if ($post_id > 0 && is_singular(tnf_social_preview_post_types())) {
-		$permalink = get_permalink($post_id);
-		$excerpt   = get_the_excerpt($post_id);
-		if ($title !== '') {
-			echo '<meta property="og:title" content="' . esc_attr($title) . "\" />\n";
-			echo '<meta name="twitter:title" content="' . esc_attr($title) . "\" />\n";
-		}
-		if (is_string($excerpt) && $excerpt !== '') {
-			echo '<meta property="og:description" content="' . esc_attr(wp_strip_all_tags($excerpt)) . "\" />\n";
-			echo '<meta name="twitter:description" content="' . esc_attr(wp_strip_all_tags($excerpt)) . "\" />\n";
-		}
-		if (is_string($permalink) && $permalink !== '') {
-			echo '<meta property="og:url" content="' . esc_url($permalink) . "\" />\n";
-		}
-		echo "<meta property=\"og:type\" content=\"article\" />\n";
+	if ($title !== '') {
+		echo '<meta property="og:image:alt" content="' . esc_attr($title) . "\" />\n";
 	}
 }
 
@@ -318,7 +443,7 @@ function tnf_pdf_report_page_og_cache_write(int $post_id, string $source, string
 }
 
 /**
- * Resize image editor output for social crawlers (WhatsApp, Facebook).
+ * Crop and resize for WhatsApp / Facebook (1.91:1, max 1200×630, under ~300 KB).
  *
  * @param WP_Image_Editor $editor Image editor instance.
  */
@@ -327,7 +452,7 @@ function tnf_social_preview_prepare_editor($editor): void {
 		return;
 	}
 
-	$editor->set_quality(85);
+	$editor->set_quality(82);
 
 	$size = $editor->get_size();
 	if (! is_array($size) || empty($size['width']) || empty($size['height'])) {
@@ -336,14 +461,26 @@ function tnf_social_preview_prepare_editor($editor): void {
 
 	$w = (int) $size['width'];
 	$h = (int) $size['height'];
-	if (max($w, $h) > 1200) {
-		$editor->resize(1200, 1200, false);
-	} elseif (min($w, $h) > 0 && min($w, $h) < 200) {
-		$scale = 200 / min($w, $h);
-		$nw    = (int) min(1200, ceil($w * $scale));
-		$nh    = (int) min(1200, ceil($h * $scale));
-		$editor->resize($nw, $nh, false);
+	if ($w < 1 || $h < 1) {
+		return;
 	}
+
+	$target_w     = 1200;
+	$target_h     = 630;
+	$target_ratio = $target_w / $target_h;
+	$current      = $w / $h;
+
+	if ($current > $target_ratio) {
+		$new_w = (int) round($h * $target_ratio);
+		$x     = (int) floor(( $w - $new_w ) / 2);
+		$editor->crop($x, 0, max(1, $new_w), $h);
+	} elseif ($current < $target_ratio) {
+		$new_h = (int) round($w / $target_ratio);
+		$y     = (int) floor(( $h - $new_h ) / 2);
+		$editor->crop(0, $y, $w, max(1, $new_h));
+	}
+
+	$editor->resize($target_w, $target_h, true);
 }
 
 /**
