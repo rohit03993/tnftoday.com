@@ -16,6 +16,7 @@ add_filter('wpseo_twitter_image', 'tnf_social_preview_filter_seo_image', 999);
 add_filter('rank_math/opengraph/facebook/image', 'tnf_social_preview_filter_seo_image', 999);
 add_filter('rank_math/opengraph/twitter/image', 'tnf_social_preview_filter_seo_image', 999);
 add_filter('rest_post_dispatch', 'tnf_rest_og_allow_crawler_headers', 15, 3);
+add_filter('oembed_response_data', 'tnf_social_preview_oembed_thumbnail', 10, 4);
 
 /**
  * WhatsApp / Facebook will not use og:image URLs marked noindex (default on all REST routes).
@@ -177,6 +178,20 @@ function tnf_social_preview_featured_image_url(int $post_id): string {
 }
 
 /**
+ * Filename for the social og JPEG (hash changes when image changes — busts WhatsApp cache).
+ */
+function tnf_social_preview_og_basename(int $post_id, string $sig = ''): string {
+	$post_id = (int) $post_id;
+	if ($sig === '') {
+		$sig = tnf_social_preview_content_sig($post_id);
+	}
+
+	$hash = substr(md5($sig !== '' ? $sig : 'post|' . $post_id), 0, 8);
+
+	return 'tnf-og-' . $post_id . '-' . $hash . '.jpg';
+}
+
+/**
  * Paths for a persisted WhatsApp-friendly JPEG under uploads (not wp-json).
  *
  * @return array{file: string, url: string}|null
@@ -192,12 +207,12 @@ function tnf_social_preview_og_upload_paths(int $post_id): ?array {
 		return null;
 	}
 
-	$dir = trailingslashit($upload['basedir']) . 'tnf-social-og';
-	$url = trailingslashit($upload['baseurl']) . 'tnf-social-og/tnf-og-' . $post_id . '.jpg';
+	$dir      = trailingslashit($upload['basedir']) . 'tnf-social-og';
+	$basename = tnf_social_preview_og_basename($post_id);
 
 	return array(
-		'file' => trailingslashit($dir) . 'tnf-og-' . $post_id . '.jpg',
-		'url'  => $url,
+		'file' => trailingslashit($dir) . $basename,
+		'url'  => trailingslashit($upload['baseurl']) . 'tnf-social-og/' . $basename,
 	);
 }
 
@@ -251,10 +266,32 @@ function tnf_social_preview_bust_cached_image(int $post_id): void {
 
 	delete_post_meta($post_id, '_tnf_social_og_sig');
 
-	$paths = tnf_social_preview_og_upload_paths($post_id);
-	if (is_array($paths) && isset($paths['file']) && is_string($paths['file']) && is_readable($paths['file'])) {
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-		@unlink($paths['file']);
+	$upload = wp_upload_dir();
+	if (! empty($upload['error'])) {
+		return;
+	}
+
+	$dir = trailingslashit($upload['basedir']) . 'tnf-social-og';
+	if (! is_dir($dir)) {
+		return;
+	}
+
+	$patterns = array(
+		$dir . '/tnf-og-' . $post_id . '-*.jpg',
+		$dir . '/tnf-og-' . $post_id . '.jpg',
+	);
+
+	foreach ($patterns as $pattern) {
+		$matches = glob($pattern);
+		if (! is_array($matches)) {
+			continue;
+		}
+		foreach ($matches as $file) {
+			if (is_string($file) && is_file($file)) {
+				// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+				@unlink($file);
+			}
+		}
 	}
 }
 
@@ -762,6 +799,34 @@ function tnf_social_preview_filter_seo_image($url): string {
 }
 
 /**
+ * oEmbed thumbnail (some apps use this instead of og:image).
+ *
+ * @param array<string,mixed> $data   oEmbed data.
+ * @param WP_Post             $post   Post object.
+ * @param int                 $width  Requested width.
+ * @param int                 $height Requested height.
+ * @return array<string,mixed>
+ */
+function tnf_social_preview_oembed_thumbnail(array $data, $post, $width, $height): array {
+	unset($width, $height);
+
+	if (! $post instanceof WP_Post || ! in_array($post->post_type, tnf_social_preview_post_types(), true)) {
+		return $data;
+	}
+
+	$url = tnf_social_preview_image_url((int) $post->ID);
+	if ($url === '') {
+		return $data;
+	}
+
+	$data['thumbnail_url']    = $url;
+	$data['thumbnail_width']  = 1200;
+	$data['thumbnail_height'] = 630;
+
+	return $data;
+}
+
+/**
  * Description text for link previews (WhatsApp requires og:description).
  */
 function tnf_social_preview_description_for_post(int $post_id): string {
@@ -827,7 +892,7 @@ function tnf_social_preview_image_dimensions(string $url): array {
 		}
 	}
 
-	if (preg_match('#/tnf-social-og/tnf-og-\d+\.jpg#', $url)) {
+	if (preg_match('#/tnf-social-og/tnf-og-\d+(?:-[a-f0-9]{8})?\.jpg#', $url)) {
 		$parts = wp_parse_url($url);
 		$path  = is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : '';
 		$rel   = ltrim($path, '/');
@@ -901,6 +966,15 @@ function tnf_social_preview_output_meta(): void {
 
 	if (is_string($permalink) && $permalink !== '') {
 		echo '<meta property="og:url" content="' . esc_url($permalink) . "\" />\n";
+	}
+
+	$post_obj = $post_id > 0 ? get_post($post_id) : null;
+	if ($post_obj instanceof WP_Post && $post_obj->post_modified_gmt !== '') {
+		$updated = gmdate('c', strtotime($post_obj->post_modified_gmt));
+		if (is_string($updated) && $updated !== '') {
+			echo '<meta property="article:modified_time" content="' . esc_attr($updated) . "\" />\n";
+			echo '<meta property="og:updated_time" content="' . esc_attr($updated) . "\" />\n";
+		}
 	}
 
 	echo "<meta property=\"og:type\" content=\"article\" />\n";
