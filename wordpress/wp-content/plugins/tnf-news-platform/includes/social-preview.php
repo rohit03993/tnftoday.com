@@ -14,6 +14,31 @@ add_filter('wpseo_opengraph_image', 'tnf_social_preview_filter_seo_image', 99);
 add_filter('wpseo_twitter_image', 'tnf_social_preview_filter_seo_image', 99);
 add_filter('rank_math/opengraph/facebook/image', 'tnf_social_preview_filter_seo_image', 99);
 add_filter('rank_math/opengraph/twitter/image', 'tnf_social_preview_filter_seo_image', 99);
+add_filter('rest_post_dispatch', 'tnf_rest_og_allow_crawler_headers', 15, 3);
+
+/**
+ * WhatsApp / Facebook will not use og:image URLs marked noindex (default on all REST routes).
+ *
+ * @param WP_REST_Response|WP_HTTP_Response|WP_Error|mixed $response Response.
+ * @param WP_REST_Server                                $server   Server.
+ * @param WP_REST_Request                               $request  Request.
+ * @return WP_REST_Response|WP_HTTP_Response|WP_Error|mixed
+ */
+function tnf_rest_og_allow_crawler_headers($response, WP_REST_Server $server, WP_REST_Request $request) {
+	unset($server);
+	if (! ( $response instanceof WP_REST_Response )) {
+		return $response;
+	}
+
+	$route = (string) $request->get_route();
+	if (! preg_match('#^/tnf/v1/pdf-report/\d+/(?:page-og|clip-og)$#', $route)) {
+		return $response;
+	}
+
+	$response->remove_header('X-Robots-Tag');
+
+	return $response;
+}
 
 /**
  * Post types that receive TNF social preview resolution.
@@ -130,7 +155,78 @@ function tnf_social_preview_featured_image_url(int $post_id): string {
 }
 
 /**
- * PDF share image: compressed page-og JPEG (WhatsApp-friendly) when available.
+ * Paths for a persisted WhatsApp-friendly JPEG under uploads (not wp-json).
+ *
+ * @return array{file: string, url: string}|null
+ */
+function tnf_pdf_report_social_og_upload_paths(int $post_id): ?array {
+	$post_id = (int) $post_id;
+	if ($post_id <= 0) {
+		return null;
+	}
+
+	$upload = wp_upload_dir();
+	if (! empty($upload['error'])) {
+		return null;
+	}
+
+	$dir = trailingslashit($upload['basedir']) . 'tnf-social-og';
+	$url = trailingslashit($upload['baseurl']) . 'tnf-social-og/tnf-og-' . $post_id . '.jpg';
+
+	return array(
+		'file' => trailingslashit($dir) . 'tnf-og-' . $post_id . '.jpg',
+		'url'  => $url,
+	);
+}
+
+/**
+ * Build and save og:image under uploads; return public HTTPS URL for WhatsApp.
+ */
+function tnf_pdf_report_social_og_public_url(int $post_id): string {
+	$post_id = (int) $post_id;
+	if ($post_id <= 0 || ! function_exists('tnf_pdf_report_build_page_og_jpeg')) {
+		return '';
+	}
+
+	$paths = tnf_pdf_report_social_og_upload_paths($post_id);
+	if ($paths === null) {
+		return '';
+	}
+
+	$sig         = (string) get_post_meta($post_id, '_tnf_pdf_last_sig', true);
+	$stored_sig  = (string) get_post_meta($post_id, '_tnf_social_og_sig', true);
+	$have_fresh  = is_readable($paths['file'])
+		&& ( time() - (int) filemtime($paths['file']) ) < 7 * DAY_IN_SECONDS
+		&& ( $sig === '' || $stored_sig === $sig );
+
+	if ($have_fresh && tnf_social_preview_is_public_image_url($paths['url'])) {
+		return $paths['url'];
+	}
+
+	$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
+	if (is_wp_error($jpeg) || ! is_string($jpeg) || $jpeg === '') {
+		return ( is_readable($paths['file']) && tnf_social_preview_is_public_image_url($paths['url']) ) ? $paths['url'] : '';
+	}
+
+	$dir = dirname($paths['file']);
+	if (! wp_mkdir_p($dir)) {
+		return '';
+	}
+
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+	if (false === @file_put_contents($paths['file'], $jpeg)) {
+		return '';
+	}
+
+	if ($sig !== '') {
+		update_post_meta($post_id, '_tnf_social_og_sig', $sig);
+	}
+
+	return tnf_social_preview_is_public_image_url($paths['url']) ? $paths['url'] : '';
+}
+
+/**
+ * PDF share image: public uploads JPEG (WhatsApp rejects many wp-json og:image URLs).
  */
 function tnf_social_preview_pdf_image_url(int $post_id): string {
 	if ($post_id <= 0) {
@@ -138,7 +234,10 @@ function tnf_social_preview_pdf_image_url(int $post_id): string {
 	}
 
 	if (function_exists('tnf_pdf_report_can_serve_page_og') && tnf_pdf_report_can_serve_page_og($post_id)) {
-		return tnf_pdf_report_page_og_rest_url($post_id);
+		$upload_url = tnf_pdf_report_social_og_public_url($post_id);
+		if ($upload_url !== '') {
+			return $upload_url;
+		}
 	}
 
 	return tnf_social_preview_featured_image_url($post_id);
@@ -309,7 +408,7 @@ function tnf_social_preview_image_dimensions(string $url): array {
 		}
 	}
 
-	if (preg_match('#/pdf-report/\d+/page-og#', $url)) {
+	if (preg_match('#/tnf-social-og/tnf-og-\d+\.jpg#', $url) || preg_match('#/pdf-report/\d+/page-og#', $url)) {
 		return array(
 			'width'  => 1200,
 			'height' => 630,

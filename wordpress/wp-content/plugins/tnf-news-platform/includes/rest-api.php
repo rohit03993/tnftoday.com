@@ -480,6 +480,10 @@ function tnf_rest_internal_pdf_job_complete(WP_REST_Request $req): WP_REST_Respo
 	delete_post_meta($post_id, 'tnf_pdf_error');
 	tnf_pdf_report_maybe_set_featured_image_from_pages($post_id, $pages);
 
+	if (function_exists('tnf_pdf_report_social_og_public_url')) {
+		tnf_pdf_report_social_og_public_url($post_id);
+	}
+
 	return new WP_REST_Response(array('ok' => true, 'post_id' => $post_id));
 }
 
@@ -624,6 +628,23 @@ function tnf_rest_pdf_report_page_og(WP_REST_Request $req): WP_REST_Response|WP_
 		return new WP_Error('server', __('Preview unavailable', 'tnf-news-platform'), array('status' => 500));
 	}
 
+	if (function_exists('tnf_pdf_report_social_og_public_url')) {
+		$public = tnf_pdf_report_social_og_public_url($post_id);
+		if ($public !== '') {
+			$paths = tnf_pdf_report_social_og_upload_paths($post_id);
+			if ($paths !== null && is_readable($paths['file'])) {
+				$jpeg = file_get_contents($paths['file']);
+				if (is_string($jpeg) && $jpeg !== '') {
+					$response = new WP_REST_Response($jpeg, 200);
+					$response->header('Content-Type', 'image/jpeg');
+					$response->header('Cache-Control', 'public, max-age=86400');
+
+					return $response;
+				}
+			}
+		}
+	}
+
 	$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
 	if (is_wp_error($jpeg)) {
 		return $jpeg;
@@ -661,6 +682,9 @@ function tnf_rest_pre_serve_pdf_clip_og(bool $served, $result, WP_REST_Request $
 
 	status_header($result->get_status());
 	foreach ($result->get_headers() as $name => $value) {
+		if (strtolower((string) $name) === 'x-robots-tag') {
+			continue;
+		}
 		$values = is_array($value) ? $value : array( $value );
 		foreach ($values as $v) {
 			header(sprintf('%s: %s', $name, $v), false);
