@@ -89,20 +89,12 @@ function tnf_social_preview_is_public_image_url(string $url): bool {
 }
 
 /**
- * Site-wide fallback og:image (custom logo, filter, or empty).
+ * Site-wide fallback og:image (explicit filter only — never the theme custom logo).
  */
 function tnf_social_preview_default_image_url(): string {
 	$filtered = apply_filters('tnf_social_preview_default_image_url', '');
 	if (is_string($filtered) && $filtered !== '' && tnf_social_preview_is_public_image_url($filtered)) {
 		return $filtered;
-	}
-
-	$logo_id = (int) get_theme_mod('custom_logo');
-	if ($logo_id > 0) {
-		$logo = wp_get_attachment_image_url($logo_id, 'full');
-		if (is_string($logo) && $logo !== '' && tnf_social_preview_is_public_image_url($logo)) {
-			return $logo;
-		}
 	}
 
 	return '';
@@ -195,8 +187,8 @@ function tnf_social_preview_og_file_is_whatsapp_ready(string $file): bool {
 	$w = (int) $info[0];
 	$h = (int) $info[1];
 
-	// Cropped output is 1200×630; logo fallback was ~641×337.
-	return $w >= 900 && $h >= 450;
+	// Cropped output should be 1200×630; logo fallback was ~641×337.
+	return $w >= 600 && $h >= 315;
 }
 
 /**
@@ -211,11 +203,72 @@ function tnf_social_preview_og_public_url_with_bust(string $url, string $file): 
 }
 
 /**
+ * Write JPEG bytes to the social-og upload path when valid for WhatsApp.
+ */
+function tnf_social_preview_write_og_upload_file(int $post_id, string $jpeg): string {
+	$post_id = (int) $post_id;
+	if ($post_id <= 0 || $jpeg === '') {
+		return '';
+	}
+
+	$paths = tnf_pdf_report_social_og_upload_paths($post_id);
+	if ($paths === null) {
+		return '';
+	}
+
+	$dir = dirname($paths['file']);
+	if (! wp_mkdir_p($dir)) {
+		return '';
+	}
+
+	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+	if (false === @file_put_contents($paths['file'], $jpeg)) {
+		return '';
+	}
+
+	if (! tnf_social_preview_og_file_is_whatsapp_ready($paths['file'])) {
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@unlink($paths['file']);
+
+		return '';
+	}
+
+	$sig = (string) get_post_meta($post_id, '_tnf_pdf_last_sig', true);
+	if ($sig !== '') {
+		update_post_meta($post_id, '_tnf_social_og_sig', $sig);
+	}
+
+	if (! tnf_social_preview_is_public_image_url($paths['url'])) {
+		return '';
+	}
+
+	return tnf_social_preview_og_public_url_with_bust($paths['url'], $paths['file']);
+}
+
+/**
+ * Crop the post featured image to 1200×630 (most reliable on production).
+ */
+function tnf_social_preview_jpeg_from_featured_attachment(int $post_id) {
+	$post_id = (int) $post_id;
+	$thumb_id = (int) get_post_thumbnail_id($post_id);
+	if ($thumb_id <= 0 || tnf_social_preview_is_site_logo_attachment($thumb_id)) {
+		return new WP_Error('no_thumb', __('No usable featured image', 'tnf-news-platform'), array('status' => 404));
+	}
+
+	$path = get_attached_file($thumb_id);
+	if (is_string($path) && $path !== '' && is_readable($path)) {
+		return tnf_social_preview_jpeg_bytes_from_file($path);
+	}
+
+	return tnf_social_preview_jpeg_bytes_from_featured($post_id);
+}
+
+/**
  * Build and save og:image under uploads; return public HTTPS URL for WhatsApp.
  */
 function tnf_pdf_report_social_og_public_url(int $post_id): string {
 	$post_id = (int) $post_id;
-	if ($post_id <= 0 || ! function_exists('tnf_pdf_report_build_page_og_jpeg')) {
+	if ($post_id <= 0) {
 		return '';
 	}
 
@@ -242,37 +295,29 @@ function tnf_pdf_report_social_og_public_url(int $post_id): string {
 		return tnf_social_preview_og_public_url_with_bust($paths['url'], $paths['file']);
 	}
 
-	$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
-	if (is_wp_error($jpeg) || ! is_string($jpeg) || $jpeg === '') {
-		return '';
+	// 1) Featured file on disk → 1200×630 (works even when PDF worker pages are missing).
+	if (has_post_thumbnail($post_id)) {
+		$from_feat = tnf_social_preview_jpeg_from_featured_attachment($post_id);
+		if (! is_wp_error($from_feat) && is_string($from_feat) && $from_feat !== '') {
+			$written = tnf_social_preview_write_og_upload_file($post_id, $from_feat);
+			if ($written !== '') {
+				return $written;
+			}
+		}
 	}
 
-	$dir = dirname($paths['file']);
-	if (! wp_mkdir_p($dir)) {
-		return '';
+	// 2) PDF page manifest / previews / brand (PDF posts only).
+	if (function_exists('tnf_pdf_report_build_page_og_jpeg')) {
+		$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
+		if (! is_wp_error($jpeg) && is_string($jpeg) && $jpeg !== '') {
+			$written = tnf_social_preview_write_og_upload_file($post_id, $jpeg);
+			if ($written !== '') {
+				return $written;
+			}
+		}
 	}
 
-	// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-	if (false === @file_put_contents($paths['file'], $jpeg)) {
-		return '';
-	}
-
-	if (! tnf_social_preview_og_file_is_whatsapp_ready($paths['file'])) {
-		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-		@unlink($paths['file']);
-
-		return '';
-	}
-
-	if ($sig !== '') {
-		update_post_meta($post_id, '_tnf_social_og_sig', $sig);
-	}
-
-	if (! tnf_social_preview_is_public_image_url($paths['url'])) {
-		return '';
-	}
-
-	return tnf_social_preview_og_public_url_with_bust($paths['url'], $paths['file']);
+	return '';
 }
 
 /**
@@ -306,31 +351,33 @@ function tnf_social_preview_pdf_featured_content_url(int $post_id): string {
 }
 
 /**
- * PDF share image: public uploads JPEG (WhatsApp rejects many wp-json og:image URLs).
+ * Cropped 1200×630 share image for any post with a real featured image.
+ */
+function tnf_social_preview_cropped_share_image_url(int $post_id): string {
+	if ($post_id <= 0 || ! has_post_thumbnail($post_id)) {
+		return '';
+	}
+
+	if (tnf_social_preview_is_site_logo_attachment((int) get_post_thumbnail_id($post_id))) {
+		return '';
+	}
+
+	if (! function_exists('tnf_pdf_report_social_og_public_url')) {
+		return '';
+	}
+
+	return tnf_pdf_report_social_og_public_url($post_id);
+}
+
+/**
+ * PDF share image: always prefer cropped uploads JPEG (never tall URL or site logo).
  */
 function tnf_social_preview_pdf_image_url(int $post_id): string {
 	if ($post_id <= 0) {
 		return '';
 	}
 
-	$pages_ready  = function_exists('tnf_pdf_report_viewer_pages') && tnf_pdf_report_viewer_pages($post_id) !== array();
-	$content_feat = tnf_social_preview_pdf_featured_content_url($post_id);
-
-	// WhatsApp needs ~1.91:1 (1200×630) JPEG under 300 KB. Facebook tolerates tall featured images; WA often does not.
-	// Always build the cropped file in uploads/tnf-social-og/ when we have real page content.
-	if (($pages_ready || $content_feat !== '') && function_exists('tnf_pdf_report_social_og_public_url')) {
-		$upload_url = tnf_pdf_report_social_og_public_url($post_id);
-		if ($upload_url !== '') {
-			return $upload_url;
-		}
-	}
-
-	// Last resort only: direct featured URL (tall; may preview poorly in WhatsApp).
-	if ($content_feat !== '') {
-		return $content_feat;
-	}
-
-	return '';
+	return tnf_social_preview_cropped_share_image_url($post_id);
 }
 
 /**
@@ -363,12 +410,16 @@ function tnf_social_preview_image_url(int $post_id): string {
 	}
 
 	$url = '';
-	if ('tnf_pdf_report' === $post->post_type) {
-		$url = tnf_social_preview_pdf_image_url($post_id);
-	} elseif ('tnf_video' === $post->post_type && function_exists('tnf_video_card_thumbnail_url')) {
+	if ('tnf_video' === $post->post_type && function_exists('tnf_video_card_thumbnail_url')) {
 		$thumb = tnf_video_card_thumbnail_url($post_id);
 		$url   = ( is_string($thumb) && $thumb !== '' && tnf_social_preview_is_public_image_url($thumb) ) ? $thumb : '';
-	} else {
+	}
+
+	if ($url === '' && has_post_thumbnail($post_id)) {
+		$url = tnf_social_preview_cropped_share_image_url($post_id);
+	}
+
+	if ($url === '' && 'tnf_pdf_report' !== $post->post_type) {
 		$url = tnf_social_preview_featured_image_url($post_id);
 	}
 
