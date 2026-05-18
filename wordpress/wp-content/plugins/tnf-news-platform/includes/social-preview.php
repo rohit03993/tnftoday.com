@@ -226,11 +226,57 @@ function tnf_pdf_report_social_og_public_url(int $post_id): string {
 }
 
 /**
+ * Whether the featured image is the site logo (not e-paper page 1).
+ */
+function tnf_social_preview_is_site_logo_attachment(int $attachment_id): bool {
+	$attachment_id = (int) $attachment_id;
+	if ($attachment_id <= 0) {
+		return false;
+	}
+
+	$logo_id = (int) get_theme_mod('custom_logo');
+
+	return $logo_id > 0 && $logo_id === $attachment_id;
+}
+
+/**
+ * Featured image on a PDF report that is real content (not the site logo).
+ */
+function tnf_social_preview_pdf_featured_content_url(int $post_id): string {
+	if ($post_id <= 0 || ! has_post_thumbnail($post_id)) {
+		return '';
+	}
+
+	$thumb_id = (int) get_post_thumbnail_id($post_id);
+	if (tnf_social_preview_is_site_logo_attachment($thumb_id)) {
+		return '';
+	}
+
+	return tnf_social_preview_featured_image_url($post_id);
+}
+
+/**
  * PDF share image: public uploads JPEG (WhatsApp rejects many wp-json og:image URLs).
  */
 function tnf_social_preview_pdf_image_url(int $post_id): string {
 	if ($post_id <= 0) {
 		return '';
+	}
+
+	$pages_ready = function_exists('tnf_pdf_report_viewer_pages') && tnf_pdf_report_viewer_pages($post_id) !== array();
+	$content_feat = tnf_social_preview_pdf_featured_content_url($post_id);
+
+	// When the worker saved page images, build the WhatsApp crop from page 1.
+	if ($pages_ready && function_exists('tnf_pdf_report_social_og_public_url')) {
+		$upload_url = tnf_pdf_report_social_og_public_url($post_id);
+		if ($upload_url !== '') {
+			return $upload_url;
+		}
+	}
+
+	// No page manifest yet: use the real featured image (e-paper page 1), never the site logo.
+	if ($content_feat !== '') {
+		return $content_feat;
 	}
 
 	if (function_exists('tnf_pdf_report_can_serve_page_og') && tnf_pdf_report_can_serve_page_og($post_id)) {
@@ -240,7 +286,7 @@ function tnf_social_preview_pdf_image_url(int $post_id): string {
 		}
 	}
 
-	return tnf_social_preview_featured_image_url($post_id);
+	return '';
 }
 
 /**
@@ -689,7 +735,7 @@ function tnf_pdf_report_can_serve_page_og(int $post_id): bool {
 		return false;
 	}
 
-	if (has_post_thumbnail($post_id)) {
+	if (tnf_social_preview_pdf_featured_content_url($post_id) !== '') {
 		return true;
 	}
 
@@ -705,7 +751,8 @@ function tnf_pdf_report_can_serve_page_og(int $post_id): bool {
 		}
 	}
 
-	if (tnf_social_preview_default_image_url() !== '' || tnf_social_preview_brand_asset_path() !== '') {
+	// Do not use site logo / masthead for PDF posts when a PDF file is attached.
+	if ($aid <= 0 && ( tnf_social_preview_default_image_url() !== '' || tnf_social_preview_brand_asset_path() !== '' )) {
 		return true;
 	}
 
@@ -715,7 +762,7 @@ function tnf_pdf_report_can_serve_page_og(int $post_id): bool {
 /**
  * Build or read cached JPEG for PDF social sharing (WhatsApp / Facebook crawlers).
  *
- * Order: rendered page 1 → featured image → PDF preview → site logo → plugin brand asset.
+ * Order: rendered page 1 → featured image (not site logo) → PDF preview → logo only if no PDF attached.
  *
  * @return string|WP_Error Raw JPEG bytes.
  */
@@ -739,9 +786,10 @@ function tnf_pdf_report_build_page_og_jpeg(int $post_id) {
 		}
 	}
 
-	if (has_post_thumbnail($post_id)) {
+	$thumb_id = (int) get_post_thumbnail_id($post_id);
+	if ($thumb_id > 0 && ! tnf_social_preview_is_site_logo_attachment($thumb_id)) {
 		$sources[] = array(
-			'key' => 'featured:' . (string) get_post_thumbnail_id($post_id),
+			'key' => 'featured:' . (string) $thumb_id,
 			'run' => static function () use ($post_id) {
 				return tnf_social_preview_jpeg_bytes_from_featured($post_id);
 			},
@@ -761,24 +809,27 @@ function tnf_pdf_report_build_page_og_jpeg(int $post_id) {
 		}
 	}
 
-	$default_url = tnf_social_preview_default_image_url();
-	if ($default_url !== '') {
-		$sources[] = array(
-			'key' => 'default:' . $default_url,
-			'run' => static function () use ($default_url) {
-				return tnf_social_preview_jpeg_bytes_from_url($default_url);
-			},
-		);
-	}
+	// Last resort: site logo only when this post has no PDF file attached.
+	if ($aid <= 0) {
+		$default_url = tnf_social_preview_default_image_url();
+		if ($default_url !== '') {
+			$sources[] = array(
+				'key' => 'default:' . $default_url,
+				'run' => static function () use ($default_url) {
+					return tnf_social_preview_jpeg_bytes_from_url($default_url);
+				},
+			);
+		}
 
-	$brand = tnf_social_preview_brand_asset_path();
-	if ($brand !== '') {
-		$sources[] = array(
-			'key' => 'brand:' . $brand,
-			'run' => static function () use ($brand) {
-				return tnf_social_preview_jpeg_bytes_from_file($brand);
-			},
-		);
+		$brand = tnf_social_preview_brand_asset_path();
+		if ($brand !== '') {
+			$sources[] = array(
+				'key' => 'brand:' . $brand,
+				'run' => static function () use ($brand) {
+					return tnf_social_preview_jpeg_bytes_from_file($brand);
+				},
+			);
+		}
 	}
 
 	foreach ($sources as $source) {

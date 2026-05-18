@@ -59,6 +59,14 @@ function tnf_pdf_report_maybe_enqueue(int $post_id, WP_Post $post, bool $update)
 
 	update_post_meta($post_id, 'tnf_pdf_status', 'queued');
 	update_post_meta($post_id, '_tnf_pdf_last_sig', $sig);
+	delete_post_meta($post_id, '_tnf_social_og_sig');
+	if (function_exists('tnf_pdf_report_social_og_upload_paths')) {
+		$og_paths = tnf_pdf_report_social_og_upload_paths($post_id);
+		if (is_array($og_paths) && isset($og_paths['file']) && is_string($og_paths['file']) && is_readable($og_paths['file'])) {
+			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			@unlink($og_paths['file']);
+		}
+	}
 
 	$internal = tnf_pdf_internal_file_url($url);
 	$ext_id   = 'post-' . $post_id;
