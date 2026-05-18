@@ -159,6 +159,19 @@ function tnf_register_rest_routes(): void {
 
 	register_rest_route(
 		$ns,
+		'/pdf-report/(?P<id>\d+)/page-og',
+		array(
+			'methods'             => 'GET',
+			'callback'            => 'tnf_rest_pdf_report_page_og',
+			'permission_callback' => '__return_true',
+			'args'                => array(
+				'id' => array('sanitize_callback' => 'absint'),
+			),
+		)
+	);
+
+	register_rest_route(
+		$ns,
 		'/submissions/(?P<id>\d+)/reject',
 		array(
 			'methods'             => 'POST',
@@ -596,6 +609,34 @@ function tnf_rest_pdf_report_clip_og(WP_REST_Request $req): WP_REST_Response|WP_
 }
 
 /**
+ * Full page-1 JPEG for social crawlers (Open Graph on PDF report permalinks).
+ *
+ * @param WP_REST_Request $req Request.
+ */
+function tnf_rest_pdf_report_page_og(WP_REST_Request $req): WP_REST_Response|WP_Error {
+	$post_id = (int) $req['id'];
+	$post    = get_post($post_id);
+	if (! $post || 'tnf_pdf_report' !== $post->post_type || 'publish' !== $post->post_status) {
+		return new WP_Error('not_found', __('Not found', 'tnf-news-platform'), array('status' => 404));
+	}
+
+	if (! function_exists('tnf_pdf_report_build_page_og_jpeg')) {
+		return new WP_Error('server', __('Preview unavailable', 'tnf-news-platform'), array('status' => 500));
+	}
+
+	$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
+	if (is_wp_error($jpeg)) {
+		return $jpeg;
+	}
+
+	$response = new WP_REST_Response($jpeg, 200);
+	$response->header('Content-Type', 'image/jpeg');
+	$response->header('Cache-Control', 'public, max-age=86400');
+
+	return $response;
+}
+
+/**
  * Serve raw JPEG from REST for clip-og route (avoid JSON encoding the body).
  *
  * @param bool            $served  Whether the request was served.
@@ -609,7 +650,7 @@ function tnf_rest_pre_serve_pdf_clip_og(bool $served, $result, WP_REST_Request $
 	}
 
 	$route = (string) $request->get_route();
-	if (! preg_match('#^/tnf/v1/pdf-report/\d+/clip-og$#', $route)) {
+	if (! preg_match('#^/tnf/v1/pdf-report/\d+/(?:clip-og|page-og)$#', $route)) {
 		return $served;
 	}
 

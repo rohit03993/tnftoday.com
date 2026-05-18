@@ -31,6 +31,7 @@ require_once TNF_NEWS_PLATFORM_PATH . 'includes/footer-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/legal-pages.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-ui.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-display.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/social-preview.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-auth.php';
 
 /**

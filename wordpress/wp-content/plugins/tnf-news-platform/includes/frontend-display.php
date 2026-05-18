@@ -18,12 +18,6 @@ add_filter('render_block', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 
 add_filter('render_block_core/post-featured-image', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
-add_action('wp_head', 'tnf_epaper_clip_social_preview_meta', 2);
-add_filter('wpseo_opengraph_image', 'tnf_epaper_clip_wpseo_opengraph_image', 99);
-add_filter('wpseo_twitter_image', 'tnf_epaper_clip_wpseo_opengraph_image', 99);
-add_filter('rank_math/opengraph/facebook/image', 'tnf_epaper_clip_rank_math_facebook_image', 99);
-add_filter('rank_math/opengraph/twitter/image', 'tnf_epaper_clip_rank_math_facebook_image', 99);
-
 /**
  * Enqueue header/footer chrome CSS (templates using shortcodes or shared classes).
  */
@@ -2000,62 +1994,4 @@ function tnf_epaper_clip_build_jpeg(int $post_id, int $pg, float $cx, float $cy,
 	}
 
 	return $bytes;
-}
-
-/**
- * Open Graph / Twitter image for clip URLs when no SEO plugin manages tags.
- */
-function tnf_epaper_clip_social_preview_meta(): void {
-	if (is_admin()) {
-		return;
-	}
-	if (defined('WPSEO_VERSION') || defined('RANK_MATH_VERSION')) {
-		return;
-	}
-	$url = tnf_epaper_clip_og_url_for_request();
-	if ($url === '') {
-		return;
-	}
-
-	$title = get_the_title((int) get_queried_object_id());
-
-	echo '<meta property="og:image" content="' . esc_url($url) . "\" />\n";
-	echo '<meta property="og:image:secure_url" content="' . esc_url($url) . "\" />\n";
-	echo '<meta name="twitter:image" content="' . esc_url($url) . "\" />\n";
-	echo "<meta name=\"twitter:card\" content=\"summary_large_image\" />\n";
-	if ($title !== '') {
-		echo '<meta property="og:image:alt" content="' . esc_attr($title) . "\" />\n";
-	}
-}
-
-/**
- * Yoast SEO: use clip JPEG when viewing a clip share URL.
- *
- * @param string $url Default Open Graph image URL.
- */
-function tnf_epaper_clip_wpseo_opengraph_image($url): string {
-	$url = is_string($url) ? $url : '';
-	if (! defined('WPSEO_VERSION')) {
-		return $url;
-	}
-
-	$clip_url = tnf_epaper_clip_og_url_for_request();
-
-	return $clip_url !== '' ? $clip_url : $url;
-}
-
-/**
- * Rank Math: use clip JPEG when viewing a clip share URL.
- *
- * @param string $url Default Facebook / OG image URL.
- */
-function tnf_epaper_clip_rank_math_facebook_image($url): string {
-	$url = is_string($url) ? $url : '';
-	if (! defined('RANK_MATH_VERSION')) {
-		return $url;
-	}
-
-	$clip_url = tnf_epaper_clip_og_url_for_request();
-
-	return $clip_url !== '' ? $clip_url : $url;
 }
