@@ -11,10 +11,10 @@ if (! defined('ABSPATH')) {
 
 add_action('wp_head', 'tnf_social_preview_output_meta', 1);
 add_action('save_post', 'tnf_social_preview_prewarm_on_save', 99, 3);
-add_filter('wpseo_opengraph_image', 'tnf_social_preview_filter_seo_image', 99);
-add_filter('wpseo_twitter_image', 'tnf_social_preview_filter_seo_image', 99);
-add_filter('rank_math/opengraph/facebook/image', 'tnf_social_preview_filter_seo_image', 99);
-add_filter('rank_math/opengraph/twitter/image', 'tnf_social_preview_filter_seo_image', 99);
+add_filter('wpseo_opengraph_image', 'tnf_social_preview_filter_seo_image', 999);
+add_filter('wpseo_twitter_image', 'tnf_social_preview_filter_seo_image', 999);
+add_filter('rank_math/opengraph/facebook/image', 'tnf_social_preview_filter_seo_image', 999);
+add_filter('rank_math/opengraph/twitter/image', 'tnf_social_preview_filter_seo_image', 999);
 add_filter('rest_post_dispatch', 'tnf_rest_og_allow_crawler_headers', 15, 3);
 
 /**
@@ -477,6 +477,58 @@ function tnf_pdf_report_social_og_public_url(int $post_id): string {
 }
 
 /**
+ * Normalize an image URL for comparison (strip query, lowercase host).
+ */
+function tnf_social_preview_normalize_image_url(string $url): string {
+	$url = trim($url);
+	if ($url === '') {
+		return '';
+	}
+
+	$parts = wp_parse_url($url);
+	if (! is_array($parts) || empty($parts['path'])) {
+		return $url;
+	}
+
+	$path = strtolower((string) $parts['path']);
+
+	return (string) ( $parts['scheme'] ?? 'https' ) . '://' . strtolower((string) ( $parts['host'] ?? '' )) . $path;
+}
+
+/**
+ * Whether a URL is the theme/site logo (Yoast default), not article content.
+ */
+function tnf_social_preview_url_is_site_branding(string $url): bool {
+	$url = trim($url);
+	if ($url === '') {
+		return false;
+	}
+
+	$norm = tnf_social_preview_normalize_image_url($url);
+	if (preg_match('#/(custom-logo|site-logo|tnf-today-logo|cropped-cropped-tnf-today-logo)#i', $norm)) {
+		return true;
+	}
+
+	$logo_id = (int) get_theme_mod('custom_logo');
+	if ($logo_id > 0) {
+		foreach (array('full', 'large', 'medium', 'thumbnail') as $size) {
+			$logo_url = wp_get_attachment_image_url($logo_id, $size);
+			if (is_string($logo_url) && $logo_url !== ''
+				&& tnf_social_preview_normalize_image_url($logo_url) === $norm) {
+				return true;
+			}
+		}
+	}
+
+	// Site-wide masthead strip (wide banner), not per-article photos.
+	if (preg_match('#/tnf-today\.jpe?g$#i', $norm) || preg_match('#/tnf-today-[0-9]+x[0-9]+\.jpe?g$#i', $norm)) {
+		return true;
+	}
+
+	return false;
+}
+
+/**
  * Whether the featured image is the site logo (not e-paper page 1).
  */
 function tnf_social_preview_is_site_logo_attachment(int $attachment_id): bool {
@@ -686,20 +738,23 @@ function tnf_social_preview_image_url_for_request(): string {
  */
 function tnf_social_preview_filter_seo_image($url): string {
 	$ours = tnf_social_preview_image_url_for_request();
+
 	if ($ours === '') {
-		return is_string($url) ? $url : '';
+		$url = is_string($url) ? trim($url) : '';
+		if ($url !== '' && tnf_social_preview_url_is_site_branding($url)) {
+			return '';
+		}
+
+		return $url;
+	}
+
+	// Always beat Yoast/Rank Math site-default logo on news, posts, PDF, and video singles.
+	if (is_singular(tnf_social_preview_post_types())) {
+		return $ours;
 	}
 
 	$url = is_string($url) ? trim($url) : '';
-	if ($url === '' || ! tnf_social_preview_is_public_image_url($url)) {
-		return $ours;
-	}
-
-	if (function_exists('tnf_epaper_clip_og_url_for_request') && tnf_epaper_clip_og_url_for_request() !== '') {
-		return $ours;
-	}
-
-	if (is_singular('tnf_pdf_report')) {
+	if ($url === '' || ! tnf_social_preview_is_public_image_url($url) || tnf_social_preview_url_is_site_branding($url)) {
 		return $ours;
 	}
 
@@ -967,6 +1022,10 @@ function tnf_social_preview_prepare_editor($editor): void {
 	} elseif ($current < $target_ratio) {
 		$new_h = (int) round($w / $target_ratio);
 		$y     = (int) floor(( $h - $new_h ) / 2);
+		// Portrait / tall images: skip masthead band at the top (newspaper layouts).
+		if ($h > $w * 1.15) {
+			$y = (int) max(0, min((int) floor($h * 0.18), $h - $new_h));
+		}
 		$crop  = $editor->crop(0, $y, $w, max(1, $new_h));
 		if (is_wp_error($crop)) {
 			return;
