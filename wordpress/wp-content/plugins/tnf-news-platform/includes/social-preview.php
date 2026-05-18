@@ -187,8 +187,14 @@ function tnf_social_preview_og_file_is_whatsapp_ready(string $file): bool {
 	$w = (int) $info[0];
 	$h = (int) $info[1];
 
-	// Cropped output should be 1200×630; logo fallback was ~641×337.
-	return $w >= 600 && $h >= 315;
+	// Cropped output must be ~1200×630; logo fallback was ~641×337.
+	if ($w < 1000 || $h < 500) {
+		return false;
+	}
+
+	$ratio = $w / max(1, $h);
+
+	return $ratio >= 1.5 && $ratio <= 2.2;
 }
 
 /**
@@ -306,7 +312,19 @@ function tnf_pdf_report_social_og_public_url(int $post_id): string {
 		}
 	}
 
-	// 2) PDF page manifest / previews / brand (PDF posts only).
+	// 2) Download featured from public URL (when local path missing in container).
+	$feat_url = tnf_social_preview_pdf_featured_content_url($post_id);
+	if ($feat_url !== '') {
+		$from_url = tnf_social_preview_jpeg_bytes_from_url($feat_url);
+		if (! is_wp_error($from_url) && is_string($from_url) && $from_url !== '') {
+			$written = tnf_social_preview_write_og_upload_file($post_id, $from_url);
+			if ($written !== '') {
+				return $written;
+			}
+		}
+	}
+
+	// 3) PDF page manifest / previews (never site logo).
 	if (function_exists('tnf_pdf_report_build_page_og_jpeg')) {
 		$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
 		if (! is_wp_error($jpeg) && is_string($jpeg) && $jpeg !== '') {
@@ -549,7 +567,31 @@ function tnf_social_preview_image_dimensions(string $url): array {
 		}
 	}
 
-	if (preg_match('#/tnf-social-og/tnf-og-\d+\.jpg#', $url) || preg_match('#/pdf-report/\d+/page-og#', $url)) {
+	if (preg_match('#/tnf-social-og/tnf-og-\d+\.jpg#', $url)) {
+		$parts = wp_parse_url($url);
+		$path  = is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : '';
+		$rel   = ltrim($path, '/');
+		if (str_starts_with($rel, 'wp-content/uploads/')) {
+			$upload = wp_upload_dir();
+			$local  = trailingslashit($upload['basedir']) . substr($rel, strlen('wp-content/uploads/'));
+			$info   = is_readable($local) ? ( function_exists('wp_getimagesize') ? wp_getimagesize($local) : @getimagesize($local) ) : false;
+			if (is_array($info) && ! empty($info[0]) && ! empty($info[1]) && (int) $info[0] >= 1000) {
+				return array(
+					'width'  => (int) $info[0],
+					'height' => (int) $info[1],
+					'type'   => ! empty($info['mime']) ? (string) $info['mime'] : 'image/jpeg',
+				);
+			}
+		}
+
+		return array(
+			'width'  => 1200,
+			'height' => 630,
+			'type'   => 'image/jpeg',
+		);
+	}
+
+	if (preg_match('#/pdf-report/\d+/page-og#', $url)) {
 		return array(
 			'width'  => 1200,
 			'height' => 630,
@@ -713,14 +755,23 @@ function tnf_social_preview_prepare_editor($editor): void {
 	if ($current > $target_ratio) {
 		$new_w = (int) round($h * $target_ratio);
 		$x     = (int) floor(( $w - $new_w ) / 2);
-		$editor->crop($x, 0, max(1, $new_w), $h);
+		$crop  = $editor->crop($x, 0, max(1, $new_w), $h);
+		if (is_wp_error($crop)) {
+			return;
+		}
 	} elseif ($current < $target_ratio) {
 		$new_h = (int) round($w / $target_ratio);
 		$y     = (int) floor(( $h - $new_h ) / 2);
-		$editor->crop(0, $y, $w, max(1, $new_h));
+		$crop  = $editor->crop(0, $y, $w, max(1, $new_h));
+		if (is_wp_error($crop)) {
+			return;
+		}
 	}
 
-	$editor->resize($target_w, $target_h, true);
+	$resize = $editor->resize($target_w, $target_h, true);
+	if (is_wp_error($resize)) {
+		return;
+	}
 }
 
 /**
@@ -749,6 +800,15 @@ function tnf_social_preview_jpeg_bytes_from_file(string $path) {
 	$file = isset($saved['path']) ? (string) $saved['path'] : '';
 	if ($file === '' || ! is_readable($file)) {
 		return new WP_Error('save', __('Could not save preview image', 'tnf-news-platform'), array('status' => 500));
+	}
+
+	$out_w = isset($saved['width']) ? (int) $saved['width'] : 0;
+	$out_h = isset($saved['height']) ? (int) $saved['height'] : 0;
+	if ($out_w < 1000 || $out_h < 500) {
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		@unlink($file);
+
+		return new WP_Error('small', __('Image too small after resize', 'tnf-news-platform'), array('status' => 500));
 	}
 
 	$bytes = file_get_contents($file);
