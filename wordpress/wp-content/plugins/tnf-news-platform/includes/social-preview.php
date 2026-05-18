@@ -263,27 +263,21 @@ function tnf_social_preview_pdf_image_url(int $post_id): string {
 		return '';
 	}
 
-	$pages_ready = function_exists('tnf_pdf_report_viewer_pages') && tnf_pdf_report_viewer_pages($post_id) !== array();
+	$pages_ready  = function_exists('tnf_pdf_report_viewer_pages') && tnf_pdf_report_viewer_pages($post_id) !== array();
 	$content_feat = tnf_social_preview_pdf_featured_content_url($post_id);
 
-	// When the worker saved page images, build the WhatsApp crop from page 1.
-	if ($pages_ready && function_exists('tnf_pdf_report_social_og_public_url')) {
+	// WhatsApp needs ~1.91:1 (1200×630) JPEG under 300 KB. Facebook tolerates tall featured images; WA often does not.
+	// Always build the cropped file in uploads/tnf-social-og/ when we have real page content.
+	if (($pages_ready || $content_feat !== '') && function_exists('tnf_pdf_report_social_og_public_url')) {
 		$upload_url = tnf_pdf_report_social_og_public_url($post_id);
 		if ($upload_url !== '') {
 			return $upload_url;
 		}
 	}
 
-	// No page manifest yet: use the real featured image (e-paper page 1), never the site logo.
+	// Last resort only: direct featured URL (tall; may preview poorly in WhatsApp).
 	if ($content_feat !== '') {
 		return $content_feat;
-	}
-
-	if (function_exists('tnf_pdf_report_can_serve_page_og') && tnf_pdf_report_can_serve_page_og($post_id)) {
-		$upload_url = tnf_pdf_report_social_og_public_url($post_id);
-		if ($upload_url !== '') {
-			return $upload_url;
-		}
 	}
 
 	return '';
