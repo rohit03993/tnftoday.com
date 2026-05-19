@@ -498,8 +498,23 @@ function tnf_social_preview_og_public_url(int $post_id): string {
 		return tnf_social_preview_og_public_url_with_bust($paths['url'], $paths['file']);
 	}
 
-	// 1) Featured file on disk → 1200×630 (works even when PDF worker pages are missing).
-	if (has_post_thumbnail($post_id)) {
+	$post      = get_post($post_id);
+	$is_pdf    = $post instanceof WP_Post && 'tnf_pdf_report' === $post->post_type;
+	$skip_feat = $is_pdf && tnf_social_preview_pdf_featured_looks_like_masthead($post_id);
+
+	// PDF: rendered pages / previews first — featured is often a tall masthead (641×1000 logo strip).
+	if ($is_pdf && function_exists('tnf_pdf_report_build_page_og_jpeg')) {
+		$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
+		if (! is_wp_error($jpeg) && is_string($jpeg) && $jpeg !== '') {
+			$written = tnf_social_preview_write_og_upload_file($post_id, $jpeg);
+			if ($written !== '') {
+				return $written;
+			}
+		}
+	}
+
+	// Featured → 1200×630 (news + PDF when not a masthead-only thumb).
+	if (! $skip_feat && has_post_thumbnail($post_id)) {
 		$from_feat = tnf_social_preview_jpeg_from_featured_attachment($post_id);
 		if (! is_wp_error($from_feat) && is_string($from_feat) && $from_feat !== '') {
 			$written = tnf_social_preview_write_og_upload_file($post_id, $from_feat);
@@ -509,19 +524,20 @@ function tnf_social_preview_og_public_url(int $post_id): string {
 		}
 	}
 
-	// 2) Download featured from public URL (when local path missing in container).
-	$feat_url = tnf_social_preview_featured_content_url($post_id);
-	if ($feat_url !== '') {
-		$from_url = tnf_social_preview_jpeg_bytes_from_url($feat_url);
-		if (! is_wp_error($from_url) && is_string($from_url) && $from_url !== '') {
-			$written = tnf_social_preview_write_og_upload_file($post_id, $from_url);
-			if ($written !== '') {
-				return $written;
+	if (! $skip_feat) {
+		$feat_url = tnf_social_preview_featured_content_url($post_id);
+		if ($feat_url !== '') {
+			$from_url = tnf_social_preview_jpeg_bytes_from_url($feat_url);
+			if (! is_wp_error($from_url) && is_string($from_url) && $from_url !== '') {
+				$written = tnf_social_preview_write_og_upload_file($post_id, $from_url);
+				if ($written !== '') {
+					return $written;
+				}
 			}
 		}
 	}
 
-	// 3) YouTube poster for news/video embeds (no featured image).
+	// YouTube poster for news/video embeds (no featured image).
 	$yt_url = tnf_social_preview_youtube_poster_url($post_id);
 	if ($yt_url !== '') {
 		$from_yt = tnf_social_preview_jpeg_bytes_from_url($yt_url);
@@ -533,19 +549,38 @@ function tnf_social_preview_og_public_url(int $post_id): string {
 		}
 	}
 
-	// 4) PDF page manifest / previews only.
-	$post = get_post($post_id);
-	if ($post instanceof WP_Post && 'tnf_pdf_report' === $post->post_type && function_exists('tnf_pdf_report_build_page_og_jpeg')) {
-		$jpeg = tnf_pdf_report_build_page_og_jpeg($post_id);
-		if (! is_wp_error($jpeg) && is_string($jpeg) && $jpeg !== '') {
-			$written = tnf_social_preview_write_og_upload_file($post_id, $jpeg);
-			if ($written !== '') {
-				return $written;
-			}
+	return '';
+}
+
+/**
+ * PDF featured image is often a tall front-page strip (logo at top), not a share crop.
+ */
+function tnf_social_preview_pdf_featured_looks_like_masthead(int $post_id): bool {
+	if ($post_id <= 0 || ! has_post_thumbnail($post_id)) {
+		return false;
+	}
+
+	$thumb_id = (int) get_post_thumbnail_id($post_id);
+	$path     = get_attached_file($thumb_id);
+	if (is_string($path) && $path !== '' && is_readable($path)) {
+		$info = function_exists('wp_getimagesize') ? wp_getimagesize($path) : @getimagesize($path);
+		if (is_array($info) && ! empty($info[0]) && ! empty($info[1])) {
+			$w = (int) $info[0];
+			$h = (int) $info[1];
+
+			return $h > $w * 1.15;
 		}
 	}
 
-	return '';
+	$url = wp_get_attachment_image_url($thumb_id, 'full');
+	if (! is_string($url) || $url === '') {
+		return false;
+	}
+
+	$parts = wp_parse_url($url);
+	$path  = is_array($parts) && isset($parts['path']) ? (string) $parts['path'] : '';
+
+	return preg_match('#5785a303|masthead|tnf-today#i', $path) === 1;
 }
 
 /**
@@ -785,7 +820,55 @@ function tnf_social_preview_image_url(int $post_id): string {
 		$url = tnf_social_preview_og_public_url($post_id);
 	}
 
+	if ($url === '' || ! tnf_social_preview_is_public_image_url($url)) {
+		$url = tnf_social_preview_fallback_image_url($post_id);
+	}
+
 	return ( is_string($url) && tnf_social_preview_is_public_image_url($url) ) ? $url : '';
+}
+
+/**
+ * Last-resort share image when cropped uploads JPEG could not be built.
+ */
+function tnf_social_preview_fallback_image_url(int $post_id): string {
+	$post_id = (int) $post_id;
+	$post    = get_post($post_id);
+	if (! $post instanceof WP_Post) {
+		return '';
+	}
+
+	if ('tnf_pdf_report' === $post->post_type && function_exists('tnf_pdf_report_viewer_pages')) {
+		$pages = tnf_pdf_report_viewer_pages($post_id);
+		foreach ($pages as $row) {
+			$page_url = isset($row['url']) ? (string) $row['url'] : '';
+			if ($page_url !== '' && tnf_social_preview_is_public_image_url($page_url)) {
+				$jpeg = tnf_social_preview_jpeg_bytes_from_url($page_url);
+				if (! is_wp_error($jpeg) && is_string($jpeg) && $jpeg !== '') {
+					$written = tnf_social_preview_write_og_upload_file($post_id, $jpeg);
+					if ($written !== '') {
+						return $written;
+					}
+				}
+
+				return $page_url;
+			}
+		}
+
+		$aid = (int) get_post_meta($post_id, 'tnf_pdf_attachment_id', true);
+		if ($aid > 0 && function_exists('tnf_pdf_attachment_preview_image_url')) {
+			$preview = tnf_pdf_attachment_preview_image_url($aid);
+			if (is_string($preview) && $preview !== '' && tnf_social_preview_is_public_image_url($preview)) {
+				return $preview;
+			}
+		}
+	}
+
+	$feat = tnf_social_preview_featured_content_url($post_id);
+	if ($feat !== '' && tnf_social_preview_is_public_image_url($feat)) {
+		return $feat;
+	}
+
+	return tnf_social_preview_youtube_poster_url($post_id);
 }
 
 /**
@@ -983,16 +1066,12 @@ function tnf_social_preview_output_meta(): void {
 		return;
 	}
 
-	$post_id = (int) get_queried_object_id();
-	$url     = tnf_social_preview_image_url_for_request();
-	$title   = $post_id > 0 ? get_the_title($post_id) : '';
-	$desc    = tnf_social_preview_description_for_post($post_id);
-	$site    = get_bloginfo('name');
+	$post_id   = (int) get_queried_object_id();
+	$url       = tnf_social_preview_image_url_for_request();
+	$title     = $post_id > 0 ? get_the_title($post_id) : '';
+	$desc      = tnf_social_preview_description_for_post($post_id);
+	$site      = get_bloginfo('name');
 	$permalink = $post_id > 0 ? get_permalink($post_id) : '';
-
-	if ($url === '') {
-		return;
-	}
 
 	if ($title !== '') {
 		echo '<meta property="og:title" content="' . esc_attr($title) . "\" />\n";
@@ -1023,6 +1102,10 @@ function tnf_social_preview_output_meta(): void {
 
 	echo "<meta property=\"og:type\" content=\"article\" />\n";
 	echo '<meta property="og:locale" content="' . esc_attr(str_replace('_', '-', (string) get_locale())) . "\" />\n";
+
+	if ($url === '') {
+		return;
+	}
 
 	echo '<meta property="og:image" content="' . esc_url($url) . "\" />\n";
 	echo '<meta property="og:image:secure_url" content="' . esc_url($url) . "\" />\n";
