@@ -9,6 +9,7 @@ if (! defined('ABSPATH')) {
 	exit;
 }
 
+add_action('template_redirect', 'tnf_social_preview_prewarm_on_view', 5);
 add_action('wp_head', 'tnf_social_preview_output_meta', 1);
 add_action('save_post', 'tnf_social_preview_prewarm_on_save', 99, 3);
 add_filter('wpseo_opengraph_image', 'tnf_social_preview_filter_seo_image', 999);
@@ -116,7 +117,32 @@ function tnf_social_preview_is_public_image_url(string $url): bool {
 		return false;
 	}
 
+	// WhatsApp / Facebook skip wp-json URLs (REST sends X-Robots-Tag: noindex).
+	$path = isset($parts['path']) ? strtolower((string) $parts['path']) : '';
+	if (str_contains($path, '/wp-json/') || str_contains($path, 'wp-json')) {
+		return false;
+	}
+
 	return true;
+}
+
+/**
+ * True when a URL must never be used as og:image (REST API endpoints).
+ */
+function tnf_social_preview_is_rest_image_url(string $url): bool {
+	$url = trim($url);
+	if ($url === '') {
+		return false;
+	}
+
+	$parts = wp_parse_url($url);
+	if (! is_array($parts) || empty($parts['path'])) {
+		return false;
+	}
+
+	$path = strtolower((string) $parts['path']);
+
+	return str_contains($path, '/wp-json/') || preg_match('#/pdf-report/\d+/(?:page-og|clip-og)#', $path) === 1;
 }
 
 /**
@@ -323,6 +349,22 @@ function tnf_social_preview_prewarm_on_save($post_id, $post, $update): void {
 	}
 
 	tnf_social_preview_bust_cached_image($post_id);
+	tnf_social_preview_og_public_url($post_id);
+}
+
+/**
+ * Build the social og JPEG before wp_head (so crawlers always get a file URL).
+ */
+function tnf_social_preview_prewarm_on_view(): void {
+	if (is_admin() || ! is_singular(tnf_social_preview_post_types())) {
+		return;
+	}
+
+	$post_id = (int) get_queried_object_id();
+	if ($post_id <= 0) {
+		return;
+	}
+
 	tnf_social_preview_og_public_url($post_id);
 }
 
@@ -694,14 +736,12 @@ function tnf_social_preview_video_image_url(int $post_id): string {
 }
 
 /**
- * Stable REST URL that returns a JPEG of PDF page 1 for social crawlers.
+ * Legacy REST page-og URL — do not use in og:image (WhatsApp ignores wp-json).
+ *
+ * @deprecated Use tnf_social_preview_og_public_url() (uploads JPEG).
  */
 function tnf_pdf_report_page_og_rest_url(int $post_id): string {
-	if ($post_id <= 0) {
-		return '';
-	}
-
-	return rest_url('tnf/v1/pdf-report/' . $post_id . '/page-og');
+	return tnf_social_preview_og_public_url((int) $post_id);
 }
 
 /**
@@ -741,6 +781,10 @@ function tnf_social_preview_image_url(int $post_id): string {
 
 	$url = (string) apply_filters('tnf_social_preview_image_url', $url, $post_id, $post);
 
+	if (tnf_social_preview_is_rest_image_url($url)) {
+		$url = tnf_social_preview_og_public_url($post_id);
+	}
+
 	return ( is_string($url) && tnf_social_preview_is_public_image_url($url) ) ? $url : '';
 }
 
@@ -754,7 +798,7 @@ function tnf_social_preview_image_url_for_request(): string {
 
 	if (function_exists('tnf_epaper_clip_og_url_for_request')) {
 		$clip = tnf_epaper_clip_og_url_for_request();
-		if ($clip !== '') {
+		if ($clip !== '' && ! tnf_social_preview_is_rest_image_url($clip) && tnf_social_preview_is_public_image_url($clip)) {
 			return $clip;
 		}
 	}
