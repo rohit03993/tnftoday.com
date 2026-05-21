@@ -1,0 +1,56 @@
+/**
+ * Mobile / app performance — lighter paint & scroll (no desktop changes).
+ */
+
+@media (max-width: 900px) {
+	.tnf-mobile-perf .tnf-home-news .tnf-card,
+	.tnf-mobile-perf .tnf-cat-card,
+	.tnf-mobile-perf .tnf-news-related-card {
+		content-visibility: auto;
+		contain-intrinsic-size: auto 280px;
+	}
+
+	.tnf-mobile-perf .tnf-home-news .tnf-side-col,
+	.tnf-mobile-perf .tnf-home-news .tnf-layout > *:not(:first-child) {
+		content-visibility: auto;
+		contain-intrinsic-size: auto 200px;
+	}
+
+	.tnf-mobile-perf .tnf-home-news .tnf-card:hover,
+	.tnf-mobile-perf .tnf-cat-card:hover,
+	.tnf-mobile-perf .tnf-news-related-card:hover {
+		transform: none !important;
+		box-shadow: var(--tnf-m-shadow, 0 4px 20px rgba(15, 19, 32, 0.08)) !important;
+	}
+
+	.tnf-mobile-perf img {
+		content-visibility: auto;
+	}
+
+	.tnf-mobile-perf .tnf-breaking-inner {
+		will-change: auto;
+	}
+}
+
+.tnf-mobile-perf--app .tnf-site-chrome,
+.tnf-mobile-perf--app .tnf-home-news {
+	-webkit-overflow-scrolling: touch;
+}
+
+.tnf-mobile-perf--app * {
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* App: hide heavy chrome animations */
+.tnf-mobile-perf--app .tnf-home-news .tnf-hero-main .tnf-hero-image,
+.tnf-mobile-perf--app .tnf-home-news .tnf-card {
+	transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tnf-mobile-perf * {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

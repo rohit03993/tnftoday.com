@@ -33,6 +33,8 @@ require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-ui.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-display.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/social-preview.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-auth.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/mobile-app.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/mobile-performance.php';
 
 /**
  * Bootstrap: CPTs and rewrites must run on `init`, not `plugins_loaded`.
@@ -51,6 +53,8 @@ function tnf_news_platform_bootstrap(): void {
 	add_action('init', 'tnf_register_pdf_integration', 8);
 	add_action('init', 'tnf_register_admin_ui', 9);
 	add_action('init', 'tnf_register_frontend_auth', 9);
+	add_action('init', 'tnf_register_mobile_app', 9);
+	add_action('init', 'tnf_register_mobile_performance', 9);
 	add_action('rest_api_init', 'tnf_register_rest_routes');
 	add_filter('rest_pre_serve_request', 'tnf_rest_pre_serve_pdf_clip_og', 10, 4);
 	add_action('transition_post_status', 'tnf_on_transition_publish_notification', 10, 3);

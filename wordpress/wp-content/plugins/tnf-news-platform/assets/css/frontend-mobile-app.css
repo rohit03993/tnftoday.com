@@ -1,0 +1,253 @@
+/**
+ * TNF Today — Capacitor Android shell only (.tnf-capacitor-app on body).
+ * Desktop and mobile browser layouts are unchanged.
+ */
+
+.tnf-capacitor-app {
+	-webkit-tap-highlight-color: transparent;
+}
+
+.tnf-capacitor-app .tnf-top-utility {
+	display: none !important;
+}
+
+.tnf-capacitor-app .tnf-masthead {
+	padding-top: max(8px, env(safe-area-inset-top));
+}
+
+.tnf-capacitor-app .tnf-site-chrome .tnf-top-nav .tnf-nav-toggle {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+.tnf-capacitor-app .tnf-site-chrome .tnf-main-menu a {
+	min-height: 44px;
+	padding-top: 12px;
+	padding-bottom: 12px;
+}
+
+.tnf-capacitor-app .tnf-auth-nav-btn {
+	min-height: 44px;
+	padding: 10px 16px;
+}
+
+/* Reserve space for bottom tab bar */
+.tnf-capacitor-app body,
+.tnf-capacitor-app {
+	--tnf-app-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+.tnf-capacitor-app .tnf-footer-bar,
+.tnf-capacitor-app footer {
+	padding-bottom: calc(var(--tnf-app-nav-height) + 12px);
+}
+
+.tnf-capacitor-app .tnf-epaper__mobile-bar {
+	bottom: var(--tnf-app-nav-height);
+}
+
+/* Bottom navigation */
+.tnf-app-bottom-nav {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 100050;
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	align-items: stretch;
+	min-height: 56px;
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	background: rgba(255, 255, 255, 0.96);
+	border-top: 1px solid rgba(15, 19, 32, 0.1);
+	box-shadow: 0 -6px 24px rgba(15, 19, 32, 0.08);
+	backdrop-filter: blur(12px);
+	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.tnf-app-bottom-nav__item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	padding: 6px 4px 8px;
+	border: 0;
+	background: transparent;
+	color: #4a5568;
+	text-decoration: none;
+	font-size: 10px;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	-webkit-user-select: none;
+	user-select: none;
+	transition: color 0.15s ease, transform 0.1s ease;
+}
+
+.tnf-app-bottom-nav__item:active {
+	transform: scale(0.96);
+}
+
+.tnf-app-bottom-nav__item.is-active {
+	color: #bc1e38;
+}
+
+.tnf-app-bottom-nav__icon {
+	font-size: 18px;
+	line-height: 1;
+}
+
+.tnf-app-bottom-nav__label {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Offline overlay */
+.tnf-app-offline {
+	position: fixed;
+	inset: 0;
+	z-index: 100100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	background: rgba(15, 19, 32, 0.92);
+	color: #fff;
+}
+
+.tnf-app-offline[hidden] {
+	display: none !important;
+}
+
+.tnf-app-offline__card {
+	max-width: 320px;
+	text-align: center;
+	padding: 28px 22px;
+	border-radius: 16px;
+	background: #1a2233;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.tnf-app-offline__title {
+	margin: 0 0 8px;
+	font-size: 1.15rem;
+	font-weight: 700;
+}
+
+.tnf-app-offline__body {
+	margin: 0 0 18px;
+	font-size: 0.95rem;
+	opacity: 0.85;
+	line-height: 1.45;
+}
+
+.tnf-app-offline__retry {
+	min-height: 44px;
+	padding: 10px 22px;
+	border: 0;
+	border-radius: 10px;
+	background: #bc1e38;
+	color: #fff;
+	font-weight: 600;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
+/* Pull-to-refresh indicator */
+.tnf-app-refresh {
+	position: fixed;
+	top: max(12px, env(safe-area-inset-top));
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100060;
+	pointer-events: none;
+}
+
+.tnf-app-refresh[hidden] {
+	display: none !important;
+}
+
+.tnf-app-refresh__spinner {
+	display: block;
+	width: 28px;
+	height: 28px;
+	border: 3px solid rgba(188, 30, 56, 0.25);
+	border-top-color: #bc1e38;
+	border-radius: 50%;
+	animation: tnf-app-spin 0.7s linear infinite;
+}
+
+@keyframes tnf-app-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Skeleton placeholders (dashboard/home cards) */
+.tnf-capacitor-app .tnf-home-news--loading .tnf-home-news-card {
+	position: relative;
+	overflow: hidden;
+	min-height: 120px;
+	background: #e8ecf2;
+	border-radius: 10px;
+}
+
+.tnf-capacitor-app .tnf-home-news--loading .tnf-home-news-card::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.55) 50%,
+		transparent 100%
+	);
+	animation: tnf-app-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes tnf-app-shimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+/* Auth pages: full-width forms, larger touch targets */
+.tnf-capacitor-app.tnf-auth-page .tnf-auth-wrap input[type='text'],
+.tnf-capacitor-app.tnf-auth-page .tnf-auth-wrap input[type='email'],
+.tnf-capacitor-app.tnf-auth-page .tnf-auth-wrap input[type='password'],
+.tnf-capacitor-app.tnf-auth-page .tnf-auth-wrap textarea,
+.tnf-capacitor-app.tnf-auth-page .tnf-auth-wrap select {
+	font-size: 16px;
+	min-height: 48px;
+}
+
+.tnf-capacitor-app.tnf-auth-page .tnf-auth-wrap button,
+.tnf-capacitor-app.tnf-auth-page .tnf-auth-wrap input[type='submit'] {
+	min-height: 48px;
+	font-size: 1rem;
+}
+
+/* Tables / wide content scroll */
+.tnf-capacitor-app table {
+	display: block;
+	max-width: 100%;
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tnf-app-refresh__spinner,
+	.tnf-capacitor-app .tnf-home-news--loading .tnf-home-news-card::after {
+		animation: none;
+	}
+
+	.tnf-app-bottom-nav__item {
+		transition: none;
+	}
+}
