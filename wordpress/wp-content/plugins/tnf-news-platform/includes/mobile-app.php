@@ -26,6 +26,7 @@ function tnf_register_mobile_app(): void {
 	add_action('wp_footer', 'tnf_mobile_app_render_offline_shell', 1);
 	add_action('wp_head', 'tnf_mobile_app_viewport_meta', 1);
 	add_filter('tnf_mobile_app_enabled', 'tnf_mobile_app_default_enabled', 10, 0);
+	add_action('template_redirect', 'tnf_mobile_app_block_wp_admin', 1);
 }
 
 /**
@@ -116,6 +117,9 @@ function tnf_mobile_app_body_class(array $classes): array {
 	if (tnf_is_auth_page()) {
 		$classes[] = 'tnf-mobile-app--auth';
 	}
+	if (is_page('my-account')) {
+		$classes[] = 'tnf-mobile-app--dashboard';
+	}
 
 	return $classes;
 }
@@ -145,6 +149,16 @@ function tnf_enqueue_mobile_app_assets(): void {
 			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-mobile-app.css',
 			array('tnf-frontend-mobile'),
 			(string) filemtime($css_path)
+		);
+	}
+
+	$ux_path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-app-experience.css';
+	if (is_readable($ux_path)) {
+		wp_enqueue_style(
+			'tnf-app-experience',
+			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-app-experience.css',
+			array('tnf-mobile-app'),
+			(string) filemtime($ux_path)
 		);
 	}
 
@@ -255,4 +269,25 @@ function tnf_mobile_app_render_offline_shell(): void {
 		<span class="tnf-app-refresh__spinner"></span>
 	</div>
 	<?php
+}
+
+/**
+ * Never open wp-admin inside the native app — redirect to member dashboard or home.
+ */
+function tnf_mobile_app_block_wp_admin(): void {
+	if (! tnf_mobile_app_active()) {
+		return;
+	}
+
+	$uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '';
+	if ($uri === '' || stripos($uri, '/wp-admin') === false) {
+		return;
+	}
+
+	$dest = function_exists('tnf_auth_page_url') && is_user_logged_in()
+		? tnf_auth_page_url('my-account')
+		: (function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/'));
+
+	wp_safe_redirect($dest, 302);
+	exit;
 }

@@ -127,6 +127,25 @@
 	}
 
 	/* ----- 3 Home ----- */
+	.tnf-home-news .tnf-hero-section {
+		margin-bottom: 8px;
+	}
+
+	.tnf-home-news .tnf-hero-main .tnf-hero-image img {
+		max-height: min(52vh, 280px);
+		object-fit: cover;
+	}
+
+	.tnf-home-news .tnf-list-thumb {
+		min-height: 44px;
+		padding: 8px 6px;
+	}
+
+	.tnf-home-news .tnf-list-thumb img {
+		width: 80px;
+		height: 58px;
+	}
+
 	.tnf-home-news .tnf-layout {
 		padding: 16px 0 32px;
 		gap: 20px;
@@ -237,9 +256,27 @@
 		padding-bottom: 24px;
 	}
 
+	.tnf-news-content-layout {
+		padding-left: max(12px, env(safe-area-inset-left));
+		padding-right: max(12px, env(safe-area-inset-right));
+	}
+
+	.tnf-news-meta-head {
+		font-size: 0.8125rem;
+	}
+
+	.single-tnf_news .wp-block-post-featured-image,
+	.single-post .wp-block-post-featured-image {
+		border-radius: 14px;
+		overflow: hidden;
+		margin-bottom: 12px !important;
+	}
+
 	.single-tnf_news .wp-block-post-title,
 	.single-post .wp-block-post-title {
 		font-size: clamp(1.2rem, 5vw + 0.2rem, 1.65rem) !important;
+		hyphens: auto;
+		word-break: break-word;
 	}
 
 	.tnf-news-content-body .entry-content h2,
@@ -342,9 +379,13 @@
 		min-height: var(--tnf-m-touch);
 	}
 
-	/* ----- 8 Auth & account ----- */
+	/* ----- 8 Auth & account (member dashboard — not wp-admin) ----- */
 	body.tnf-auth-page {
 		background: var(--tnf-m-bg);
+	}
+
+	body.tnf-auth-page .wp-block-post-title {
+		display: none;
 	}
 
 	.tnf-auth-shell {
@@ -355,6 +396,41 @@
 		box-shadow: var(--tnf-m-shadow);
 		border-radius: var(--tnf-m-radius);
 		border: 1px solid rgba(15, 19, 32, 0.06);
+	}
+
+	.tnf-account-box .tnf-kpi-grid {
+		display: flex;
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		gap: 10px;
+		padding-bottom: 8px;
+		-webkit-overflow-scrolling: touch;
+		scrollbar-width: none;
+	}
+
+	.tnf-account-box .tnf-kpi-grid::-webkit-scrollbar {
+		display: none;
+	}
+
+	.tnf-kpi-card {
+		flex: 0 0 auto;
+		min-width: 110px;
+	}
+
+	.tnf-submissions-list li {
+		flex-direction: column;
+		align-items: stretch;
+		background: var(--tnf-m-card);
+		border: 1px solid #e4e7ee;
+		border-radius: 12px;
+		padding: 12px;
+		margin-bottom: 8px;
+	}
+
+	.tnf-sub-delete-btn {
+		width: 100%;
+		min-height: 44px;
+		margin-top: 8px;
 	}
 
 	.tnf-auth-form label {
