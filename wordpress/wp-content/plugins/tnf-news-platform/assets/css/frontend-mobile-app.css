@@ -68,26 +68,22 @@
 	display: none !important;
 }
 
-/* Shorts — full width first (height-from-width was ~260px and clipped YT controls) */
+/* Shorts — width + strict 9:16; JS scales down uniformly if taller than viewport */
 .tnf-capacitor-app .tnf-video-embed--shorts,
 .tnf-capacitor-app .tnf-video-embed[data-tnf-shorts='1'],
 .tnf-capacitor-app figure.tnf-video-embed--shorts {
 	--tnf-shorts-w: min(calc(100vw - 20px), 400px);
-	--tnf-shorts-h: min(
-		calc(var(--tnf-shorts-w) * 16 / 9),
-		calc(100dvh - var(--tnf-app-nav-height, 64px) - 132px),
-		calc(100svh - var(--tnf-app-nav-height, 64px) - 132px),
-		640px
-	);
 }
 
 .tnf-capacitor-app .tnf-video-embed--shorts .wp-block-embed__wrapper,
 .tnf-capacitor-app .tnf-video-embed[data-tnf-shorts='1'] .wp-block-embed__wrapper,
 .tnf-capacitor-app figure.tnf-video-embed--shorts .wp-block-embed__wrapper {
 	width: var(--tnf-shorts-w) !important;
-	height: var(--tnf-shorts-h) !important;
-	max-height: var(--tnf-shorts-h) !important;
-	padding-bottom: 0 !important;
+	max-height: min(
+		calc(100dvh - var(--tnf-app-nav-height, 64px) - 120px),
+		calc(100svh - var(--tnf-app-nav-height, 64px) - 120px),
+		720px
+	);
 }
 
 body.tnf-capacitor-app {
