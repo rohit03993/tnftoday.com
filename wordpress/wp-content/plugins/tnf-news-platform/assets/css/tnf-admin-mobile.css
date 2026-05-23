@@ -1,0 +1,803 @@
+/**
+ * TNF CMS — mobile wp-admin (app-style). Applies via body.tnf-admin-mobile and max-width 782px.
+ */
+
+:root {
+	--tnf-mob-topbar-h: 56px;
+	--tnf-mob-topbar-gap: 6px;
+}
+
+/* ----- Shell: hide WP chrome, use full width ----- */
+@media screen and (max-width: 782px) {
+	body.tnf-admin-mobile-ready #wpadminbar,
+	body.tnf-admin-branded #wpadminbar {
+		display: none !important;
+	}
+
+	html.wp-toolbar {
+		padding-top: 0 !important;
+		margin-top: 0 !important;
+	}
+
+	body.tnf-admin-mobile-ready #wpcontent,
+	body.tnf-admin-branded #wpcontent,
+	body.tnf-admin-mobile-ready #wpfooter,
+	body.tnf-admin-branded #wpfooter {
+		margin-left: 0 !important;
+	}
+
+	body.tnf-admin-mobile-ready #wpbody,
+	body.tnf-admin-branded #wpbody {
+		padding-top: 0 !important;
+		padding-bottom: 0 !important;
+	}
+
+	body.tnf-admin-mobile-ready #wpbody-content,
+	body.tnf-admin-branded #wpbody-content {
+		padding: calc(var(--tnf-mob-topbar-h) + env(safe-area-inset-top, 0px) + var(--tnf-mob-topbar-gap)) 14px
+			calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+		box-sizing: border-box;
+		min-height: 100dvh;
+		overflow-x: hidden !important;
+		overflow-y: visible !important;
+		position: relative;
+		z-index: 1;
+	}
+
+	/* Kill Screen Options / Help (never on phone) */
+	body.tnf-admin-mobile-ready #screen-meta-links,
+	body.tnf-admin-mobile-ready #screen-meta,
+	body.tnf-admin-branded #screen-meta-links,
+	body.tnf-admin-branded #screen-meta,
+	body.tnf-admin-mobile-ready #screen-options-link-wrap,
+	body.tnf-admin-mobile-ready #contextual-help-link-wrap,
+	body.tnf-admin-mobile-ready #screen-options-link,
+	body.tnf-admin-mobile-ready #contextual-help-link,
+	body.tnf-admin-mobile-ready #wp-responsive-toggle {
+		display: none !important;
+		height: 0 !important;
+		max-height: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		overflow: hidden !important;
+		visibility: hidden !important;
+		position: absolute !important;
+		left: -9999px !important;
+	}
+
+	body.tnf-admin-mobile-ready #wpcontent {
+		overflow: visible !important;
+	}
+
+	body.tnf-admin-mobile-ready #wpbody-content > .wrap,
+	body.tnf-admin-branded #wpbody-content > .wrap {
+		width: 100% !important;
+		max-width: none !important;
+		float: none !important;
+		clear: both !important;
+		margin-top: 0 !important;
+		padding-top: 2px !important;
+	}
+
+	/* Page titles must sit below fixed TNF bar — all admin screens */
+	body.tnf-admin-mobile-ready .wrap > h1,
+	body.tnf-admin-branded .wrap > h1,
+	body.tnf-admin-mobile-ready .wrap > h1.wp-heading-inline,
+	body.tnf-admin-branded .wrap > h1.wp-heading-inline {
+		display: block !important;
+		float: none !important;
+		width: 100% !important;
+		margin: 0 0 12px !important;
+		padding: 2px 0 0 !important;
+		font-size: 1.25rem !important;
+		line-height: 1.35 !important;
+		letter-spacing: -0.01em;
+		position: relative;
+		z-index: 2;
+		overflow: visible !important;
+	}
+
+	body.tnf-admin-mobile-ready hr.wp-header-end,
+	body.tnf-admin-branded hr.wp-header-end {
+		display: none !important;
+		height: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		border: 0 !important;
+		visibility: hidden !important;
+	}
+
+	body.tnf-admin-mobile-ready #dashboard-widgets-wrap,
+	body.tnf-admin-mobile-ready #dashboard-widgets {
+		overflow: visible !important;
+		padding-bottom: 16px;
+	}
+
+	/* Sidebar off-canvas (override WP display:none on narrow screens) */
+	body.tnf-admin-mobile-ready #adminmenuback,
+	body.tnf-admin-branded #adminmenuback {
+		display: none;
+	}
+
+	body.tnf-admin-mobile-ready #adminmenuwrap,
+	body.tnf-admin-branded #adminmenuwrap {
+		display: block !important;
+		visibility: visible !important;
+		position: fixed;
+		top: 52px;
+		left: 0;
+		bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+		width: min(280px, 88vw) !important;
+		z-index: 100200;
+		transform: translateX(-105%);
+		transition: transform 0.22s ease;
+		box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+		overflow-x: hidden;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-menu-open #adminmenuwrap,
+	body.tnf-admin-branded.tnf-mob-menu-open #adminmenuwrap,
+	body.tnf-admin-mobile-ready #wpbody.wp-responsive-open #adminmenuwrap,
+	body.tnf-admin-branded #wpbody.wp-responsive-open #adminmenuwrap {
+		display: block !important;
+		transform: translateX(0);
+	}
+
+	body.tnf-admin-branded #adminmenu {
+		width: 100% !important;
+		min-height: 100%;
+	}
+
+	/* Hide clutter (update nags, etc.) on all mobile admin screens */
+	body.tnf-admin-branded .update-nag,
+	body.tnf-admin-branded #wpbody-content > .wrap > .notice.update-nag,
+	body.tnf-admin-branded #footer-thankyou {
+		display: none !important;
+	}
+
+	body.tnf-admin-branded.index-php #wpfooter {
+		display: none;
+	}
+}
+
+/* Fixed top bar (injected in admin_footer) */
+.tnf-mob-admin-top {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 100500;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-height: var(--tnf-mob-topbar-h);
+	height: var(--tnf-mob-topbar-h);
+	box-sizing: border-box;
+	padding: 8px 12px;
+	padding-top: max(8px, env(safe-area-inset-top, 0px));
+	background: #12141c;
+	color: #fff;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.tnf-mob-admin-top__menu {
+	flex-shrink: 0;
+	width: 44px;
+	height: 44px;
+	border: 0;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.1);
+	color: #fff;
+	font-size: 20px;
+	cursor: pointer;
+}
+
+.tnf-mob-admin-top__brand {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	line-height: 1.2;
+}
+
+.tnf-mob-admin-top__kicker {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	opacity: 0.75;
+}
+
+.tnf-mob-admin-top__name {
+	font-size: 15px;
+	font-weight: 800;
+	color: #fff !important;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tnf-mob-admin-top__site,
+.tnf-mob-admin-top__action {
+	flex-shrink: 0;
+	padding: 8px 12px;
+	border-radius: 999px;
+	background: #bc1e38;
+	color: #fff !important;
+	font-size: 12px;
+	font-weight: 700;
+	text-decoration: none !important;
+}
+
+.tnf-mob-admin-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 100100;
+	background: rgba(0, 0, 0, 0.45);
+}
+
+.tnf-mob-admin-backdrop[hidden] {
+	display: none !important;
+}
+
+/* Bottom tabs */
+.tnf-mob-admin-tabs {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 100150;
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	min-height: 56px;
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	background: #fff;
+	border-top: 1px solid #e4e8f0;
+	box-shadow: 0 -4px 20px rgba(15, 19, 32, 0.08);
+}
+
+.tnf-mob-admin-tabs__item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	padding: 6px 4px;
+	border: 0;
+	background: transparent;
+	color: #5c6370;
+	font-size: 10px;
+	font-weight: 600;
+	text-decoration: none !important;
+	cursor: pointer;
+}
+
+.tnf-mob-admin-tabs__item span[aria-hidden='true'] {
+	font-size: 16px;
+	line-height: 1;
+}
+
+.tnf-mob-admin-tabs__item.is-active {
+	color: #bc1e38;
+	font-weight: 800;
+}
+
+.tnf-mob-admin-tabs__item--accent {
+	color: #bc1e38;
+}
+
+/* ----- Dashboard compact layout ----- */
+@media screen and (max-width: 782px) {
+	/* Top bar already shows name — hide duplicate hero so nothing is clipped */
+	body.tnf-admin-mobile-ready.index-php .tnf-admin-hero,
+	body.tnf-admin-branded.index-php .tnf-admin-hero {
+		display: none !important;
+	}
+
+	body.tnf-admin-mobile-ready.index-php #tnf_newsroom_dashboard,
+	body.tnf-admin-branded.index-php #tnf_newsroom_dashboard {
+		margin-top: 0;
+	}
+
+	/* KPI: 2 columns, compact */
+	body.tnf-admin-branded.index-php .tnf-dash-unified__section {
+		margin-bottom: 12px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-section-title {
+		font-size: 13px;
+		margin-bottom: 8px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-unified__section .tnf-dash-kpi-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+		gap: 8px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-kpi {
+		min-height: 76px;
+		padding: 10px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-kpi__value {
+		font-size: 1.35rem;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-kpi__label {
+		font-size: 11px;
+		margin-top: 4px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-kpi__hint {
+		display: none;
+	}
+
+	/* Panels stack — no wasted right space */
+	body.tnf-admin-branded.index-php .tnf-dash-unified__grid {
+		grid-template-columns: 1fr !important;
+		gap: 10px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-unified__panel {
+		padding: 12px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-unified__panel .tnf-dash-table-wrap,
+	body.tnf-admin-branded.index-php .tnf-dash-unified__panel .tnf-dash-recent {
+		max-height: none;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-footnote {
+		display: none;
+	}
+
+	/* Staff table → cards */
+	body.tnf-admin-branded.index-php .tnf-dash-table thead {
+		display: none;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-table tbody tr {
+		display: block;
+		margin-bottom: 8px;
+		padding: 10px 12px;
+		background: #f7f8fb;
+		border: 1px solid #e4e8f0 !important;
+		border-radius: 12px;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-table tbody td {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 4px 0 !important;
+		border: 0 !important;
+		text-align: right !important;
+		width: auto !important;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-table tbody td:first-child {
+		display: block;
+		text-align: left !important;
+		padding-bottom: 8px !important;
+		margin-bottom: 4px;
+		border-bottom: 1px solid #e4e8f0 !important;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-table tbody td[data-label]::before {
+		content: attr(data-label);
+		font-size: 11px;
+		font-weight: 600;
+		color: #5c6370;
+		text-align: left;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-unified__panel--actions .tnf-admin-hub-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+	}
+
+	body.tnf-admin-branded.index-php .tnf-dash-unified__panel--actions .tnf-admin-hub-card__desc {
+		display: none;
+	}
+}
+
+/* ----- All list/edit admin pages (News, PDF, Videos, Posts…) ----- */
+@media screen and (max-width: 782px) {
+	body.tnf-admin-mobile-ready .wrap,
+	body.tnf-admin-branded .wrap {
+		margin: 0 !important;
+		padding: 0 !important;
+		max-width: none !important;
+	}
+
+	body.tnf-admin-mobile-ready .wrap .page-title-action,
+	body.tnf-admin-branded .wrap .page-title-action {
+		display: inline-flex !important;
+		float: none !important;
+		align-items: center;
+		min-height: 42px;
+		margin: 0 0 14px !important;
+		padding: 0 16px !important;
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 700;
+		clear: both !important;
+	}
+
+	body.tnf-admin-mobile-ready .subsubsub,
+	body.tnf-admin-branded .subsubsub {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin: 0 0 12px !important;
+		padding: 0;
+		font-size: 12px;
+		line-height: 1.4;
+	}
+
+	body.tnf-admin-mobile-ready .subsubsub a,
+	body.tnf-admin-branded .subsubsub a {
+		padding: 4px 0;
+	}
+
+	/* Search + filters form */
+	body.tnf-admin-mobile-ready #posts-filter,
+	body.tnf-admin-mobile-ready .search-form,
+	body.tnf-admin-branded #posts-filter {
+		display: block;
+		width: 100%;
+		margin: 0 0 12px;
+		overflow: visible;
+	}
+
+	body.tnf-admin-mobile-ready .search-box,
+	body.tnf-admin-branded .search-box {
+		float: none !important;
+		width: 100% !important;
+		margin: 0 0 10px !important;
+		display: flex !important;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	body.tnf-admin-mobile-ready .search-box input[type='search'],
+	body.tnf-admin-mobile-ready .search-box input[name='s'],
+	body.tnf-admin-branded .search-box input[type='search'],
+	body.tnf-admin-branded .search-box input[name='s'] {
+		width: 100% !important;
+		max-width: none !important;
+		min-height: 44px;
+		box-sizing: border-box;
+		border-radius: 10px;
+	}
+
+	body.tnf-admin-mobile-ready .search-box #search-submit,
+	body.tnf-admin-branded .search-box #search-submit {
+		width: 100%;
+		min-height: 44px;
+		margin: 0 !important;
+		border-radius: 10px;
+	}
+
+	body.tnf-admin-mobile-ready .tablenav,
+	body.tnf-admin-branded .tablenav {
+		clear: both !important;
+		float: none !important;
+		width: 100% !important;
+		height: auto !important;
+		margin: 10px 0 !important;
+		padding: 0 !important;
+		display: flex !important;
+		flex-direction: column;
+		gap: 10px;
+		overflow: visible !important;
+	}
+
+	body.tnf-admin-mobile-ready .tablenav .alignleft,
+	body.tnf-admin-mobile-ready .tablenav .alignright,
+	body.tnf-admin-branded .tablenav .alignleft,
+	body.tnf-admin-branded .tablenav .alignright {
+		float: none !important;
+		width: 100% !important;
+		display: flex !important;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-items: center;
+	}
+
+	body.tnf-admin-mobile-ready .tablenav-pages,
+	body.tnf-admin-branded .tablenav-pages {
+		float: none !important;
+		width: 100%;
+		text-align: center;
+		margin: 0 !important;
+	}
+
+	body.tnf-admin-mobile-ready .tablenav select,
+	body.tnf-admin-branded .tablenav select {
+		max-width: 100%;
+		min-height: 40px;
+	}
+
+	/* List table → clean cards (fix overlapping thead/tfoot) */
+	body.tnf-admin-mobile-ready .wp-list-table,
+	body.tnf-admin-branded .wp-list-table {
+		display: block !important;
+		width: 100% !important;
+		border: 0 !important;
+		box-shadow: none !important;
+		background: transparent !important;
+		table-layout: auto !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table thead,
+	body.tnf-admin-mobile-ready .wp-list-table tfoot,
+	body.tnf-admin-branded .wp-list-table thead,
+	body.tnf-admin-branded .wp-list-table tfoot {
+		display: none !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody,
+	body.tnf-admin-branded .wp-list-table tbody {
+		display: block !important;
+		width: 100% !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody tr,
+	body.tnf-admin-branded .wp-list-table tbody tr {
+		display: block !important;
+		position: relative !important;
+		width: 100% !important;
+		margin: 0 0 12px !important;
+		padding: 14px !important;
+		box-sizing: border-box !important;
+		background: #fff !important;
+		border: 1px solid #e4e8f0 !important;
+		border-radius: 14px !important;
+		box-shadow: 0 2px 10px rgba(15, 19, 32, 0.05) !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody tr.is-expanded,
+	body.tnf-admin-branded .wp-list-table tbody tr.is-expanded {
+		padding-bottom: 12px !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table .check-column,
+	body.tnf-admin-branded .wp-list-table .check-column {
+		display: none !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody td,
+	body.tnf-admin-branded .wp-list-table tbody td {
+		display: flex !important;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 10px;
+		width: 100% !important;
+		padding: 6px 0 !important;
+		border: 0 !important;
+		text-align: right !important;
+		font-size: 13px;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody td.hidden,
+	body.tnf-admin-branded .wp-list-table tbody td.hidden {
+		display: none !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody td.column-primary,
+	body.tnf-admin-branded .wp-list-table tbody td.column-primary {
+		display: block !important;
+		padding: 0 0 10px !important;
+		margin-bottom: 8px !important;
+		text-align: left !important;
+		border-bottom: 1px solid #eef1f6 !important;
+		font-size: 15px !important;
+		font-weight: 700;
+		line-height: 1.35;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody td.column-primary::before,
+	body.tnf-admin-branded .wp-list-table tbody td.column-primary::before {
+		display: none !important;
+		content: none !important;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table tbody td[data-colname]::before,
+	body.tnf-admin-branded .wp-list-table tbody td[data-colname]::before {
+		content: attr(data-colname);
+		flex: 0 0 auto;
+		max-width: 45%;
+		font-size: 11px;
+		font-weight: 700;
+		color: #5c6370;
+		text-align: left;
+		text-transform: none;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table .toggle-row,
+	body.tnf-admin-branded .wp-list-table .toggle-row {
+		position: absolute;
+		top: 12px;
+		right: 10px;
+		width: 36px;
+		height: 36px;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table .row-actions,
+	body.tnf-admin-branded .wp-list-table .row-actions {
+		visibility: visible !important;
+		opacity: 1 !important;
+		position: static !important;
+		display: block !important;
+		margin-top: 8px !important;
+		padding-top: 8px !important;
+		border-top: 1px solid #eef1f6;
+		font-size: 12px;
+	}
+
+	body.tnf-admin-mobile-ready .wp-list-table .row-actions span,
+	body.tnf-admin-branded .wp-list-table .row-actions span {
+		display: inline-block;
+		margin: 2px 4px 2px 0;
+	}
+
+	/* No extra table fragments below cards */
+	body.tnf-admin-mobile-ready .wp-list-table-widefat,
+	body.tnf-admin-branded .wp-list-table-widefat {
+		margin-bottom: 8px;
+	}
+
+	body.tnf-admin-mobile-ready hr.wp-header-end,
+	body.tnf-admin-branded hr.wp-header-end {
+		display: none !important;
+		margin: 0 !important;
+	}
+
+	body.tnf-admin-mobile-ready .notice,
+	body.tnf-admin-branded .wrap > .notice {
+		margin: 0 0 12px !important;
+		border-radius: 10px;
+	}
+}
+
+/* ----- Write / edit screens: keep TNF top bar, hide bottom tabs only ----- */
+@media screen and (max-width: 782px) {
+	/* TNF top bar always visible */
+	body.tnf-admin-mobile-ready .tnf-mob-admin-top,
+	body.tnf-admin-branded .tnf-mob-admin-top {
+		display: flex !important;
+	}
+
+	/* If Gutenberg still loads, tuck it under our bar (fallback only) */
+	body.tnf-admin-mobile-ready.block-editor-page .tnf-mob-admin-tabs,
+	body.tnf-admin-branded.block-editor-page .tnf-mob-admin-tabs {
+		display: none !important;
+	}
+
+	body.tnf-admin-mobile-ready.block-editor-page #wpbody-content,
+	body.tnf-admin-branded.block-editor-page #wpbody-content {
+		padding: calc(var(--tnf-mob-topbar-h) + env(safe-area-inset-top, 0px) + var(--tnf-mob-topbar-gap)) 0 16px !important;
+	}
+
+	body.tnf-admin-mobile-ready.block-editor-page .edit-post-header,
+	body.tnf-admin-branded.block-editor-page .edit-post-header {
+		top: 52px !important;
+	}
+
+	/* Classic editor — simple form under TNF bar */
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor .tnf-mob-admin-tabs,
+	body.tnf-admin-branded.tnf-mob-is-editor .tnf-mob-admin-tabs {
+		display: none !important;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #wpbody-content,
+	body.tnf-admin-branded.tnf-mob-is-editor #wpbody-content {
+		padding: calc(var(--tnf-mob-topbar-h) + env(safe-area-inset-top, 0px) + var(--tnf-mob-topbar-gap)) 12px 28px !important;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor .wrap > h1,
+	body.tnf-admin-branded.tnf-mob-is-editor .wrap > h1 {
+		margin-top: 0 !important;
+		padding-top: 2px !important;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #post-body-content,
+	body.tnf-admin-branded.tnf-mob-is-editor #post-body-content {
+		margin: 0;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #titlediv #title,
+	body.tnf-admin-branded.tnf-mob-is-editor #titlediv #title {
+		width: 100% !important;
+		min-height: 48px;
+		font-size: 18px;
+		padding: 12px;
+		border-radius: 10px;
+		box-sizing: border-box;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #poststuff .postbox,
+	body.tnf-admin-branded.tnf-mob-is-editor #poststuff .postbox {
+		border-radius: 12px;
+		margin-bottom: 12px;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #poststuff #submitdiv,
+	body.tnf-admin-branded.tnf-mob-is-editor #poststuff #submitdiv {
+		position: sticky;
+		bottom: 8px;
+		z-index: 50;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #publish,
+	body.tnf-admin-branded.tnf-mob-is-editor #publish {
+		width: 100%;
+		min-height: 48px;
+		font-size: 15px;
+		font-weight: 700;
+		border-radius: 999px;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #wp-content-editor-container,
+	body.tnf-admin-branded.tnf-mob-is-editor #wp-content-editor-container {
+		border-radius: 10px;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor .wp-editor-area,
+	body.tnf-admin-branded.tnf-mob-is-editor .wp-editor-area {
+		min-height: 220px;
+		font-size: 16px;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #post-body.columns-2 #postbox-container-1,
+	body.tnf-admin-branded.tnf-mob-is-editor #post-body.columns-2 #postbox-container-1 {
+		float: none;
+		width: 100%;
+	}
+
+	body.tnf-admin-mobile-ready.tnf-mob-is-editor #post-body-content,
+	body.tnf-admin-branded.tnf-mob-is-editor #post-body-content {
+		width: 100%;
+		float: none;
+	}
+}
+
+/* Settings / generic forms */
+@media screen and (max-width: 782px) {
+	body.tnf-admin-mobile-ready .form-table th,
+	body.tnf-admin-branded .form-table th {
+		display: block;
+		width: 100%;
+		padding-bottom: 4px;
+	}
+
+	body.tnf-admin-mobile-ready .form-table td,
+	body.tnf-admin-branded .form-table td {
+		display: block;
+		width: 100%;
+		padding-top: 0;
+		padding-bottom: 16px;
+	}
+
+	body.tnf-admin-mobile-ready .card,
+	body.tnf-admin-branded .card {
+		margin: 0 0 12px;
+		border-radius: 12px;
+	}
+}
+
+/* Hide mobile shell on desktop */
+@media screen and (min-width: 783px) {
+	.tnf-mob-admin-top,
+	.tnf-mob-admin-tabs,
+	.tnf-mob-admin-backdrop {
+		display: none !important;
+	}
+
+	body.tnf-admin-branded #wpbody {
+		padding-top: 0;
+		padding-bottom: 0;
+	}
+}

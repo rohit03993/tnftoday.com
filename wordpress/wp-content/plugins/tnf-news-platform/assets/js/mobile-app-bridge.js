@@ -108,6 +108,18 @@
 		}
 	}
 
+	function openInAppBrowser(url) {
+		hapticLight();
+		var Browser = plugin('Browser');
+		if (Browser && typeof Browser.open === 'function') {
+			Browser.open({ url: url }).catch(function () {
+				window.open(url, '_blank', 'noopener,noreferrer');
+			});
+		} else {
+			window.open(url, '_blank', 'noopener,noreferrer');
+		}
+	}
+
 	function handleExternalLinks() {
 		document.addEventListener(
 			'click',
@@ -117,26 +129,27 @@
 					return;
 				}
 				var anchor = target.closest('a[href]');
-				if (!anchor || anchor.getAttribute('target') === '_blank') {
+				if (!anchor) {
 					return;
 				}
 				var href = anchor.getAttribute('href');
 				if (!href || href.indexOf('mailto:') === 0 || href.indexOf('tel:') === 0) {
 					return;
 				}
+				/* wp-admin / CMS — open outside main WebView (same host but not reader UX). */
+				if (anchor.hasAttribute('data-tnf-open-browser')) {
+					event.preventDefault();
+					openInAppBrowser(href);
+					return;
+				}
+				if (anchor.getAttribute('target') === '_blank') {
+					return;
+				}
 				if (!isExternalUrl(href)) {
 					return;
 				}
 				event.preventDefault();
-				hapticLight();
-				var Browser = plugin('Browser');
-				if (Browser && typeof Browser.open === 'function') {
-					Browser.open({ url: href }).catch(function () {
-						window.open(href, '_blank', 'noopener,noreferrer');
-					});
-				} else {
-					window.open(href, '_blank', 'noopener,noreferrer');
-				}
+				openInAppBrowser(href);
 			},
 			true
 		);

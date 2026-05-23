@@ -1,0 +1,364 @@
+/**
+ * TNF Today — branded wp-admin (CMS). Features unchanged; visual layer only.
+ */
+
+/* ----- Login ----- */
+body.login {
+	background: linear-gradient(145deg, #12141c 0%, #1a2233 50%, #12141c 100%) !important;
+	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body.login #login {
+	width: min(400px, 92vw);
+	padding: 24px 16px 40px;
+}
+
+body.login h1 a {
+	background-size: contain !important;
+	background-position: center !important;
+	width: 200px !important;
+	height: 56px !important;
+	margin: 0 auto 20px !important;
+}
+
+body.login form {
+	border: none;
+	border-radius: 16px;
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+	padding: 26px 24px 28px;
+}
+
+body.login label {
+	font-weight: 600;
+	color: #333;
+}
+
+body.login input[type='text'],
+body.login input[type='password'] {
+	border-radius: 10px;
+	border: 1px solid #d8dde8;
+	font-size: 16px;
+	padding: 10px 12px;
+}
+
+body.login .button-primary {
+	background: linear-gradient(180deg, #d42036 0%, #8f1428 100%) !important;
+	border: none !important;
+	border-radius: 999px !important;
+	box-shadow: 0 4px 16px rgba(188, 30, 56, 0.4);
+	text-shadow: none !important;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	min-height: 44px;
+	width: 100%;
+}
+
+body.login .message,
+body.login .success {
+	border-left-color: #bc1e38 !important;
+	border-radius: 10px;
+}
+
+/* ----- Admin layout ----- */
+body.tnf-admin-branded.wp-admin,
+body.tnf-admin-branded.wp-admin #wpwrap {
+	background: var(--tnf-admin-bg, #eef1f6) !important;
+}
+
+body.tnf-admin-branded #wpbody-content {
+	padding-bottom: 24px;
+}
+
+body.wp-admin #wpcontent,
+body.wp-admin #wpfooter {
+	margin-left: 220px;
+}
+
+body.wp-admin.folded #wpcontent,
+body.wp-admin.folded #wpfooter {
+	margin-left: 36px;
+}
+
+/* Sidebar — full-height dark column (no white gap at bottom) */
+#adminmenuback {
+	position: fixed;
+	top: 32px;
+	left: 0;
+	bottom: 0;
+	width: 220px;
+	z-index: 998;
+	background: var(--tnf-admin-sidebar, #12141c) !important;
+}
+
+#adminmenuwrap {
+	position: relative;
+	float: left;
+	z-index: 999;
+	min-height: calc(100vh - 32px);
+	padding-bottom: 48px;
+	background: var(--tnf-admin-sidebar, #12141c) !important;
+	border-right: 1px solid rgba(255, 255, 255, 0.06);
+	box-sizing: border-box;
+}
+
+#adminmenu {
+	width: 220px;
+	min-height: calc(100vh - 80px);
+	background: transparent !important;
+}
+
+#adminmenu li.wp-menu-separator {
+	background: rgba(255, 255, 255, 0.08);
+	height: 1px;
+	margin: 8px 12px;
+}
+
+#collapse-menu {
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: var(--tnf-admin-sidebar, #12141c) !important;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.folded #adminmenuback {
+	width: 36px;
+}
+
+body.folded #adminmenuwrap {
+	width: 36px;
+}
+
+body.folded #adminmenu {
+	width: 36px;
+}
+
+#adminmenu a {
+	color: rgba(255, 255, 255, 0.88) !important;
+	font-size: 13px;
+	font-weight: 500;
+}
+
+#adminmenu .wp-submenu {
+	background: var(--tnf-admin-sidebar-hover, #1c2230) !important;
+}
+
+#adminmenu .wp-submenu a {
+	color: rgba(255, 255, 255, 0.75) !important;
+}
+
+#adminmenu li.menu-top:hover,
+#adminmenu li.opensub > a.menu-top,
+#adminmenu li > a.menu-top:focus {
+	background: var(--tnf-admin-sidebar-hover, #1c2230) !important;
+	color: #fff !important;
+}
+
+#adminmenu li.current a.menu-top,
+#adminmenu li.wp-has-current-submenu a.wp-has-current-submenu,
+#adminmenu .wp-has-current-submenu .wp-submenu .wp-submenu-head,
+#adminmenu .wp-has-current-submenu .wp-submenu a.current {
+	background: var(--tnf-admin-red, #bc1e38) !important;
+	color: #fff !important;
+}
+
+#adminmenu .wp-menu-image:before {
+	color: rgba(255, 255, 255, 0.65) !important;
+}
+
+#adminmenu li.current .wp-menu-image:before,
+#adminmenu li.wp-has-current-submenu .wp-menu-image:before {
+	color: #fff !important;
+}
+
+#adminmenu .update-plugins {
+	background: var(--tnf-admin-red, #bc1e38) !important;
+}
+
+/* Admin bar */
+#wpadminbar {
+	background: var(--tnf-admin-sidebar, #12141c) !important;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
+
+#wpadminbar .ab-item,
+#wpadminbar a.ab-item,
+#wpadminbar > #wp-toolbar span.ab-label,
+#wpadminbar > #wp-toolbar span.noticon {
+	color: rgba(255, 255, 255, 0.9) !important;
+}
+
+#wpadminbar .ab-top-menu > li:hover > .ab-item,
+#wpadminbar .ab-top-menu > li > .ab-item:focus,
+#wpadminbar.nojq .quicklinks .ab-top-menu > li > .ab-item:focus,
+#wpadminbar .ab-top-menu > li.hover > .ab-item {
+	background: var(--tnf-admin-sidebar-hover, #1c2230) !important;
+	color: #fff !important;
+}
+
+#wpadminbar #wp-admin-bar-site-name > a,
+#wpadminbar #wp-admin-bar-tnf-cms-brand > a {
+	font-weight: 800 !important;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	font-size: 12px !important;
+}
+
+.tnf-admin-bar-brand {
+	color: #fff;
+}
+
+/* Hide WordPress welcome marketing panel */
+.welcome-panel,
+[class*='welcome-panel'] {
+	display: none !important;
+}
+
+/* Dashboard cards (exclude TNF hero — it lives on dark gradient) */
+.wrap h1,
+.wrap > h2:first-child:not(.tnf-admin-hero__title) {
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	color: #12141c;
+}
+
+.postbox,
+.metabox-holder .postbox {
+	border: none !important;
+	border-radius: 14px !important;
+	box-shadow: 0 2px 16px rgba(15, 19, 32, 0.06) !important;
+}
+
+.postbox .postbox-header,
+.postbox .hndle {
+	border-bottom: 1px solid #e8ecf2;
+	font-weight: 700;
+}
+
+.postbox .handlediv {
+	border-radius: 8px;
+}
+
+/* Primary buttons */
+.wp-core-ui .button-primary {
+	background: var(--tnf-admin-red, #bc1e38) !important;
+	border-color: var(--tnf-admin-red-dark, #8f1428) !important;
+	border-radius: 8px !important;
+	text-shadow: none !important;
+	box-shadow: 0 2px 8px rgba(188, 30, 56, 0.25);
+}
+
+.wp-core-ui .button-primary:hover,
+.wp-core-ui .button-primary:focus {
+	background: var(--tnf-admin-red-dark, #8f1428) !important;
+	border-color: var(--tnf-admin-red-dark, #8f1428) !important;
+}
+
+.wp-core-ui .button,
+.wp-core-ui .button-secondary {
+	border-radius: 8px !important;
+}
+
+/* List tables */
+.wp-list-table {
+	border-radius: 12px;
+	overflow: hidden;
+	border: 1px solid #e4e8f0;
+	box-shadow: 0 2px 12px rgba(15, 19, 32, 0.04);
+}
+
+.wp-list-table thead th,
+.wp-list-table thead td {
+	background: #f7f8fb;
+	font-weight: 700;
+}
+
+.tablenav .tablenav-pages {
+	border-radius: 8px;
+}
+
+/* Notices */
+.notice {
+	border-radius: 10px !important;
+	border-left-width: 4px !important;
+}
+
+.notice-success {
+	border-left-color: #1a7f37 !important;
+}
+
+.notice-error {
+	border-left-color: var(--tnf-admin-red, #bc1e38) !important;
+}
+
+/* Block editor shell */
+.interface-interface-skeleton__sidebar,
+.edit-post-sidebar {
+	border-color: #e4e8f0;
+}
+
+/* Plugins page cards */
+.plugin-card {
+	border-radius: 12px !important;
+}
+
+/* Footer */
+#wpfooter {
+	color: #5c6370;
+	font-size: 12px;
+}
+
+#wpfooter a {
+	color: var(--tnf-admin-red, #bc1e38);
+}
+
+/* Folded menu */
+.folded #adminmenu .wp-submenu {
+	left: 36px;
+}
+
+#collapse-button {
+	color: rgba(255, 255, 255, 0.7) !important;
+}
+
+#collapse-button:hover {
+	color: #fff !important;
+}
+
+/* Hide generic WP footer version plug */
+body.tnf-admin-branded #footer-upgrade {
+	display: none;
+}
+
+/* Screen meta / tabs */
+body.tnf-admin-branded .nav-tab-wrapper {
+	border-bottom-color: #e4e8f0;
+}
+
+body.tnf-admin-branded .nav-tab-active {
+	border-bottom-color: var(--tnf-admin-red, #bc1e38) !important;
+	color: var(--tnf-admin-red, #bc1e38) !important;
+}
+
+/* Submenu flyout shadow */
+#adminmenu .wp-submenu-wrap {
+	box-shadow: 4px 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Gutenberg top bar */
+body.tnf-admin-branded .edit-post-header {
+	background: #fff;
+	border-bottom: 1px solid #e4e8f0;
+}
+
+@media screen and (max-width: 782px) {
+	body.wp-admin #wpcontent,
+	body.wp-admin #wpfooter {
+		margin-left: 0;
+	}
+
+	#wpadminbar {
+		position: fixed;
+	}
+}

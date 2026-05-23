@@ -1,11 +1,25 @@
 /**
- * Optional branding for wp-login.php (kept minimal; avoids 404 if enqueued).
+ * wp-login.php — complements tnf-admin-theme.css
  */
 
 body.login {
-	background: #f4f4f4;
+	background: linear-gradient(145deg, #12141c 0%, #1a2233 50%, #12141c 100%);
 }
 
-body.login h1 a {
-	background-size: contain;
+body.login #login h1 a {
+	filter: brightness(1.05);
+}
+
+body.login #nav a,
+body.login #backtoblog a {
+	color: rgba(255, 255, 255, 0.75) !important;
+}
+
+body.login #nav a:hover,
+body.login #backtoblog a:hover {
+	color: #fff !important;
+}
+
+body.login .privacy-policy-page-link {
+	color: rgba(255, 255, 255, 0.55) !important;
 }

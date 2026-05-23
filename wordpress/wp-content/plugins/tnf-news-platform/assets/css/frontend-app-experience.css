@@ -275,6 +275,76 @@
 	text-align: center;
 }
 
+/* ----- Editorial hub (admins/editors in app) ----- */
+.tnf-capacitor-app .tnf-app-editorial-hub {
+	margin: 0 0 18px;
+	padding: 16px 14px;
+	border-radius: var(--tnf-app-radius);
+	background: linear-gradient(135deg, #12141c 0%, #2a1520 50%, #bc1e38 100%);
+	color: #fff;
+	box-shadow: 0 8px 28px rgba(188, 30, 56, 0.2);
+}
+
+.tnf-capacitor-app .tnf-app-editorial-hub__title {
+	margin: 0 0 6px;
+	font-size: 1.1rem;
+	font-weight: 800;
+	color: #fff !important;
+}
+
+.tnf-capacitor-app .tnf-app-editorial-hub__lead {
+	margin: 0 0 12px;
+	font-size: 12px;
+	line-height: 1.45;
+	opacity: 0.92;
+	color: #fff !important;
+}
+
+.tnf-capacitor-app .tnf-app-editorial-hub__grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+}
+
+.tnf-capacitor-app .tnf-app-editorial-hub__card {
+	display: flex;
+	flex-direction: column;
+	min-height: 72px;
+	padding: 12px;
+	border-radius: 12px;
+	background: rgba(255, 255, 255, 0.12);
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	text-decoration: none !important;
+	color: #fff !important;
+}
+
+.tnf-capacitor-app .tnf-app-editorial-hub__card:active {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+.tnf-capacitor-app .tnf-app-editorial-hub__label {
+	font-size: 13px;
+	font-weight: 800;
+	line-height: 1.2;
+}
+
+.tnf-capacitor-app .tnf-app-editorial-hub__desc {
+	margin-top: 4px;
+	font-size: 11px;
+	opacity: 0.85;
+}
+
+.tnf-capacitor-app .tnf-app-cms-hint {
+	margin: 0 0 14px;
+	padding: 10px 12px;
+	font-size: 12px;
+	line-height: 1.45;
+	border-radius: 10px;
+	background: #fff8f9;
+	border: 1px solid #f0b4be;
+	color: #5c6370;
+}
+
 /* ----- Member dashboard (My Account — not wp-admin) ----- */
 .tnf-capacitor-app .tnf-account-shell {
 	max-width: 100%;

@@ -700,7 +700,18 @@ function tnf_sc_account_box(): string {
 	}
 	$is_premium = tnf_user_has_subscription((int) $user->ID);
 	$is_admin   = user_can($user, 'manage_options');
-	$role_label = $is_admin ? __('Administrator', 'tnf-news-platform') : __('Contributor Member', 'tnf-news-platform');
+	if ($is_admin) {
+		$role_label = __('Administrator', 'tnf-news-platform');
+	} elseif (user_can($user, 'edit_others_posts')) {
+		$role_label = __('Head editor', 'tnf-news-platform');
+	} elseif (user_can($user, 'edit_posts')) {
+		$role_label = __('Editor', 'tnf-news-platform');
+	} else {
+		$role_label = __('Contributor member', 'tnf-news-platform');
+	}
+	$display_name = function_exists('tnf_admin_user_greeting_name')
+		? tnf_admin_user_greeting_name($user)
+		: ($user->display_name ?: $user->user_login);
 	$logout_url = wp_logout_url(home_url('/'));
 	$sub_q = new WP_Query(
 		array(
@@ -718,6 +729,12 @@ function tnf_sc_account_box(): string {
 	echo tnf_auth_flash_message_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	echo '<div class="tnf-account-box tnf-auth-card">';
 	echo '<h1 class="tnf-auth-title">' . esc_html__('My Account', 'tnf-news-platform') . '</h1>';
+	if (function_exists('tnf_mobile_app_render_account_editorial_hub')) {
+		tnf_mobile_app_render_account_editorial_hub();
+	}
+	if (isset($_GET['tnf_cms']) && '1' === (string) wp_unslash($_GET['tnf_cms']) && current_user_can('edit_posts')) {
+		echo '<p class="tnf-app-cms-hint">' . esc_html__('Tap “CMS dashboard” below to open the editorial panel. It opens in editor mode so the app feed stays fast.', 'tnf-news-platform') . '</p>';
+	}
 	echo '<div class="tnf-kpi-grid">';
 	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Total Submissions', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['total']) . '</strong></article>';
 	echo '<article class="tnf-kpi-card"><span class="tnf-kpi-label">' . esc_html__('Live on site', 'tnf-news-platform') . '</span><strong class="tnf-kpi-value">' . esc_html((string) $submission_counts['approved']) . '</strong></article>';
@@ -728,7 +745,7 @@ function tnf_sc_account_box(): string {
 	echo '<div class="tnf-account-grid">';
 	echo '<section class="tnf-dash-card">';
 	echo '<h3>' . esc_html__('Profile', 'tnf-news-platform') . '</h3>';
-	echo '<p><strong>' . esc_html($user->display_name ?: $user->user_login) . '</strong><br />' . esc_html($user->user_email) . '</p>';
+	echo '<p><strong>' . esc_html($display_name) . '</strong><br />' . esc_html($user->user_email) . '</p>';
 	echo '<p>' . esc_html__('Role:', 'tnf-news-platform') . ' <span class="tnf-role-badge">' . esc_html($role_label) . '</span></p>';
 	echo '<p>' . esc_html__('Subscription:', 'tnf-news-platform') . ' <span class="tnf-sub-badge ' . esc_attr($is_premium ? 'is-active' : 'is-inactive') . '">' . esc_html($is_premium ? __('Active', 'tnf-news-platform') : __('Inactive', 'tnf-news-platform')) . '</span></p>';
 	echo '<p><a href="' . esc_url(home_url('/news/')) . '">' . esc_html__('Browse News', 'tnf-news-platform') . '</a></p>';

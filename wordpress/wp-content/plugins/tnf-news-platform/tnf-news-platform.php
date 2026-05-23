@@ -30,6 +30,9 @@ require_once TNF_NEWS_PLATFORM_PATH . 'includes/header-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/footer-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/legal-pages.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-ui.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-dashboard-stats.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-branding.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-mobile.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-display.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/social-preview.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/frontend-auth.php';
@@ -52,6 +55,8 @@ function tnf_news_platform_bootstrap(): void {
 	add_action('init', 'tnf_register_workflow_hooks', 8);
 	add_action('init', 'tnf_register_pdf_integration', 8);
 	add_action('init', 'tnf_register_admin_ui', 9);
+	add_action('init', 'tnf_register_admin_branding', 9);
+	add_action('init', 'tnf_register_admin_mobile', 9);
 	add_action('init', 'tnf_register_frontend_auth', 9);
 	add_action('init', 'tnf_register_mobile_app', 9);
 	add_action('init', 'tnf_register_mobile_performance', 9);

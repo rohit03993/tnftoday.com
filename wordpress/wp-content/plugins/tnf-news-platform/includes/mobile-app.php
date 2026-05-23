@@ -101,6 +101,9 @@ function tnf_mobile_app_body_class(array $classes): array {
 
 	if (is_user_logged_in()) {
 		$classes[] = 'tnf-mobile-app--logged-in';
+		if (current_user_can('edit_posts')) {
+			$classes[] = 'tnf-mobile-app--editor';
+		}
 	} else {
 		$classes[] = 'tnf-mobile-app--guest';
 	}
@@ -175,6 +178,7 @@ function tnf_enqueue_mobile_app_assets(): void {
 		true
 	);
 
+	$is_editor = is_user_logged_in() && current_user_can('edit_posts');
 	wp_localize_script(
 		'tnf-mobile-app-bridge',
 		'tnfMobileApp',
@@ -185,6 +189,9 @@ function tnf_enqueue_mobile_app_assets(): void {
 			'loginUrl'    => function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/login/'),
 			'accountUrl'  => function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/'),
 			'isLoggedIn'  => is_user_logged_in(),
+			'isEditor'    => $is_editor,
+			'cmsUrl'      => $is_editor ? admin_url() : '',
+			'addNewsUrl'  => $is_editor ? admin_url('post-new.php?post_type=tnf_news') : '',
 			'pullRefresh' => true,
 			'i18n'        => array(
 				'offlineTitle' => __('No internet connection', 'tnf-news-platform'),
@@ -220,7 +227,7 @@ function tnf_mobile_app_render_bottom_nav(): void {
 		$active = 'epaper';
 	} elseif (is_page('videos') || is_singular('tnf_video')) {
 		$active = 'videos';
-	} elseif (tnf_is_auth_page()) {
+	} elseif (is_page('my-account') || tnf_is_auth_page()) {
 		$active = 'account';
 	}
 
@@ -272,7 +279,7 @@ function tnf_mobile_app_render_offline_shell(): void {
 }
 
 /**
- * Never open wp-admin inside the native app — redirect to member dashboard or home.
+ * Keep wp-admin out of the main WebView (broken UX). Editors open CMS via in-app browser from Account.
  */
 function tnf_mobile_app_block_wp_admin(): void {
 	if (! tnf_mobile_app_active()) {
@@ -284,10 +291,106 @@ function tnf_mobile_app_block_wp_admin(): void {
 		return;
 	}
 
+	// Allow REST/AJAX if ever hit from WebView.
+	if (defined('REST_REQUEST') && REST_REQUEST) {
+		return;
+	}
+	if (wp_doing_ajax()) {
+		return;
+	}
+
 	$dest = function_exists('tnf_auth_page_url') && is_user_logged_in()
 		? tnf_auth_page_url('my-account')
 		: (function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/'));
 
-	wp_safe_redirect($dest, 302);
+	wp_safe_redirect(add_query_arg('tnf_cms', '1', $dest), 302);
 	exit;
+}
+
+/**
+ * Editorial quick links for native app Account screen (admins / editors).
+ *
+ * @return array<int, array{label: string, url: string, desc: string}>
+ */
+function tnf_mobile_app_editorial_links(): array {
+	if (! is_user_logged_in() || ! current_user_can('edit_posts')) {
+		return array();
+	}
+
+	$links = array(
+		array(
+			'label' => __('CMS dashboard', 'tnf-news-platform'),
+			'url'   => admin_url(),
+			'desc'  => __('Stats, team, publish news', 'tnf-news-platform'),
+		),
+		array(
+			'label' => __('Add news', 'tnf-news-platform'),
+			'url'   => admin_url('post-new.php?post_type=tnf_news'),
+			'desc'  => __('New article', 'tnf-news-platform'),
+		),
+		array(
+			'label' => __('All news', 'tnf-news-platform'),
+			'url'   => admin_url('edit.php?post_type=tnf_news'),
+			'desc'  => __('Edit published stories', 'tnf-news-platform'),
+		),
+		array(
+			'label' => __('ePaper', 'tnf-news-platform'),
+			'url'   => admin_url('edit.php?post_type=tnf_pdf_report'),
+			'desc'  => __('PDF editions', 'tnf-news-platform'),
+		),
+	);
+
+	if (current_user_can('edit_others_tnf_submissions') || current_user_can('manage_options')) {
+		$links[] = array(
+			'label' => __('Submissions', 'tnf-news-platform'),
+			'url'   => admin_url('edit.php?post_type=tnf_user_submission'),
+			'desc'  => __('Review member posts', 'tnf-news-platform'),
+		);
+	}
+
+	return $links;
+}
+
+/**
+ * Render editorial hub on My Account when in Capacitor app.
+ */
+function tnf_mobile_app_render_account_editorial_hub(): void {
+	if (! tnf_mobile_app_active() || ! is_user_logged_in()) {
+		return;
+	}
+
+	$links = tnf_mobile_app_editorial_links();
+	if ($links === array()) {
+		return;
+	}
+
+	$name = function_exists('tnf_admin_user_greeting_name')
+		? tnf_admin_user_greeting_name(wp_get_current_user())
+		: (wp_get_current_user()->display_name ?: '');
+	?>
+	<section class="tnf-app-editorial-hub" aria-labelledby="tnf-app-editorial-heading">
+		<h2 id="tnf-app-editorial-heading" class="tnf-app-editorial-hub__title">
+			<?php esc_html_e('Editorial workspace', 'tnf-news-platform'); ?>
+		</h2>
+		<?php if ($name !== '') : ?>
+			<p class="tnf-app-editorial-hub__lead">
+				<?php
+				printf(
+					/* translators: %s: name */
+					esc_html__('Signed in as %s. CMS opens in a secure editor view (not inside the news feed).', 'tnf-news-platform'),
+					esc_html($name)
+				);
+				?>
+			</p>
+		<?php endif; ?>
+		<div class="tnf-app-editorial-hub__grid">
+			<?php foreach ($links as $link) : ?>
+				<a class="tnf-app-editorial-hub__card" href="<?php echo esc_url($link['url']); ?>" data-tnf-open-browser="1">
+					<span class="tnf-app-editorial-hub__label"><?php echo esc_html($link['label']); ?></span>
+					<span class="tnf-app-editorial-hub__desc"><?php echo esc_html($link['desc']); ?></span>
+				</a>
+			<?php endforeach; ?>
+		</div>
+	</section>
+	<?php
 }
