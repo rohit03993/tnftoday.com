@@ -44,9 +44,9 @@
 }
 
 .tnf-capacitor-app .tnf-masthead {
-	padding: 10px 0 8px !important;
-	box-shadow: 0 1px 0 var(--tnf-app-line);
-	background: var(--tnf-app-surface) !important;
+	padding: 8px 0 6px !important;
+	box-shadow: none;
+	background: transparent !important;
 }
 
 .tnf-capacitor-app .tnf-site-chrome .tnf-top-nav {
@@ -54,8 +54,13 @@
 }
 
 .tnf-capacitor-app .tnf-masthead-unified__img,
+.tnf-capacitor-app .tnf-logo-home .tnf-logo-image img,
 .tnf-capacitor-app .tnf-logo-image img {
 	max-height: 42px !important;
+}
+
+.tnf-capacitor-app .tnf-logo-home:active {
+	opacity: 0.88;
 }
 
 .tnf-capacitor-app .tnf-site-chrome .tnf-top-nav {

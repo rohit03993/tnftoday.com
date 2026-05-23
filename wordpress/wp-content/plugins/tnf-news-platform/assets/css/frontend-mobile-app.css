@@ -19,6 +19,20 @@
 	padding-top: 10px !important;
 }
 
+.tnf-capacitor-app .tnf-logo-home,
+.tnf-capacitor-app .tnf-masthead-unified__link.tnf-logo-home {
+	display: inline-flex;
+	align-items: center;
+	min-height: 0;
+	min-width: 0;
+	padding: 4px 0;
+	background: transparent;
+}
+
+.tnf-capacitor-app .tnf-masthead-inner {
+	min-height: 44px;
+}
+
 .tnf-capacitor-app .tnf-site-chrome .tnf-top-nav .tnf-nav-toggle {
 	min-width: 44px;
 	min-height: 44px;

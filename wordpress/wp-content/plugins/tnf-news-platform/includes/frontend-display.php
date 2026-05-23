@@ -166,6 +166,18 @@ function tnf_news_nav_items(): array {
 }
 
 /**
+ * One primary nav link (desktop bar + mobile drawer).
+ *
+ * @param array{label:string, url:string} $item Nav item.
+ */
+function tnf_render_main_menu_link(array $item): void {
+	$active = tnf_news_nav_url_is_current($item['url']) ? ' is-active' : '';
+	echo '<a class="tnf-main-menu__link' . esc_attr($active) . '" href="' . esc_url($item['url']) . '">';
+	echo '<span class="tnf-main-menu__label">' . esc_html($item['label']) . '</span>';
+	echo '</a>';
+}
+
+/**
  * Whether a nav URL is the current request.
  *
  * @param string $url Nav href.
@@ -420,6 +432,38 @@ function tnf_render_site_footer_chrome(bool $wrap_root_typography = true): void 
 }
 
 /**
+ * Front-page URL for masthead logo / home control.
+ */
+function tnf_masthead_home_url(): string {
+	return home_url('/');
+}
+
+/**
+ * Custom logo image markup for masthead (no nested home link).
+ */
+function tnf_masthead_custom_logo_image_html(): string {
+	if (! function_exists('has_custom_logo') || ! has_custom_logo()) {
+		return '';
+	}
+	$logo_id = (int) get_theme_mod('custom_logo');
+	if ($logo_id <= 0) {
+		return '';
+	}
+	$html = wp_get_attachment_image(
+		$logo_id,
+		'full',
+		false,
+		array(
+			'class'    => 'custom-logo',
+			'loading'  => 'eager',
+			'decoding' => 'async',
+			'alt'      => get_bloginfo('name', 'display'),
+		)
+	);
+	return is_string($html) ? $html : '';
+}
+
+/**
  * Site header chrome.
  *
  * @param bool $wrap_root_typography Add .tnf-home-news on wrapper.
@@ -436,8 +480,6 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 	$account_url  = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/');
 	$epaper_url   = get_post_type_archive_link('tnf_pdf_report');
 	$epaper_url   = is_string($epaper_url) && $epaper_url !== '' ? $epaper_url : home_url('/pdf-reports/');
-	$videos_url   = get_post_type_archive_link('tnf_video');
-	$videos_url   = is_string($videos_url) && $videos_url !== '' ? $videos_url : '';
 	$root_class   = $wrap_root_typography ? 'tnf-site-chrome tnf-home-news' : 'tnf-site-chrome';
 	$ticker_inner = tnf_news_breaking_ticker_inner_html();
 
@@ -447,25 +489,14 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 	$banner_src          = $banner_aid ? wp_get_attachment_image_url($banner_aid, 'large') : '';
 	$has_unified_masthead = is_string($banner_src) && $banner_src !== '';
 	$masthead_inner_class = 'tnf-shell tnf-masthead-inner' . ( $has_unified_masthead ? ' tnf-masthead-inner--unified' : '' );
+	$home_url             = tnf_masthead_home_url();
+	$home_aria            = sprintf(
+		/* translators: %s: site name */
+		__('Go to %s homepage', 'tnf-news-platform'),
+		get_bloginfo('name', 'display')
+	);
 	?>
 	<div class="<?php echo esc_attr($root_class); ?>">
-		<div class="tnf-top-utility">
-			<div class="tnf-shell">
-				<div class="tnf-top-utility__left">
-					<?php if ($videos_url !== '') : ?>
-						<a href="<?php echo esc_url($videos_url); ?>"><?php esc_html_e('Videos', 'tnf-news-platform'); ?></a>
-					<?php endif; ?>
-					<a href="<?php echo esc_url($epaper_url); ?>"><?php esc_html_e('ePaper', 'tnf-news-platform'); ?></a>
-					<a href="<?php echo esc_url(home_url('/about-us/')); ?>"><?php esc_html_e('About Us', 'tnf-news-platform'); ?></a>
-					<a href="<?php echo esc_url(home_url('/contact-us/')); ?>"><?php esc_html_e('Contact Us', 'tnf-news-platform'); ?></a>
-					<a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php esc_html_e('Privacy Policy', 'tnf-news-platform'); ?></a>
-				</div>
-				<div class="tnf-top-utility__right">
-					<span><?php echo esc_html(wp_date('l, d M Y')); ?></span>
-				</div>
-			</div>
-		</div>
-
 		<header class="tnf-masthead">
 			<div class="<?php echo esc_attr($masthead_inner_class); ?>">
 				<?php if ($has_unified_masthead) : ?>
@@ -481,36 +512,42 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 						)
 					);
 					?>
+					<?php
+					$unified_href = $banner_link !== '' ? $banner_link : $home_url;
+					$unified_rel  = $banner_link !== '' ? '' : 'home';
+					?>
 					<div class="tnf-masthead-unified">
-						<?php if ($banner_link !== '') : ?>
-							<a class="tnf-masthead-unified__link" href="<?php echo esc_url($banner_link); ?>">
-								<?php echo $unified_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-							</a>
-						<?php else : ?>
+						<a
+							class="tnf-masthead-unified__link tnf-logo-home"
+							href="<?php echo esc_url($unified_href); ?>"
+							<?php if ($unified_rel !== '') : ?>
+								rel="<?php echo esc_attr($unified_rel); ?>"
+							<?php endif; ?>
+							aria-label="<?php echo esc_attr($home_aria); ?>"
+						>
 							<?php echo $unified_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-						<?php endif; ?>
+						</a>
 					</div>
 				<?php else : ?>
-					<div class="tnf-logo-wrap">
-						<?php if (function_exists('has_custom_logo') && has_custom_logo()) : ?>
-							<div class="tnf-logo-image"><?php the_custom_logo(); ?></div>
+					<?php
+					$logo_img   = tnf_masthead_custom_logo_image_html();
+					$site_title = trim((string) get_bloginfo('name', 'display'));
+					$tagline    = trim((string) get_bloginfo('description', 'display'));
+					if ($tagline === '' && function_exists('get_theme_mod')) {
+						// Backward compatibility: keep existing custom tagline only when WP tagline is empty.
+						$tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
+					}
+					?>
+					<a class="tnf-logo-home" href="<?php echo esc_url($home_url); ?>" rel="home" aria-label="<?php echo esc_attr($home_aria); ?>">
+						<?php if ($logo_img !== '') : ?>
+							<span class="tnf-logo-image"><?php echo $logo_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+						<?php elseif ($site_title !== '') : ?>
+							<span class="tnf-brand"><?php echo esc_html($site_title); ?></span>
 						<?php endif; ?>
-						<?php
-						$site_title = trim((string) get_bloginfo('name', 'display'));
-						$tagline    = trim((string) get_bloginfo('description', 'display'));
-						if ($tagline === '' && function_exists('get_theme_mod')) {
-							// Backward compatibility: keep existing custom tagline only when WP tagline is empty.
-							$tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
-						}
-						?>
-						<div class="tnf-brand"><?php echo esc_html($site_title); ?></div>
-						<?php if ($tagline !== '') : ?>
-						<div class="tnf-meta"><?php echo esc_html($tagline); ?></div>
+						<?php if ($tagline !== '' && $logo_img === '') : ?>
+							<span class="tnf-meta"><?php echo esc_html($tagline); ?></span>
 						<?php endif; ?>
-					</div>
-					<div class="tnf-head-ad" aria-hidden="true">
-						<span><?php esc_html_e('Top Banner Space', 'tnf-news-platform'); ?></span>
-					</div>
+					</a>
 				<?php endif; ?>
 				<div class="tnf-account-wrap">
 					<?php if (is_user_logged_in()) : ?>
@@ -544,6 +581,12 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 				</button>
 				</div>
 				<nav id="tnf-main-menu" class="tnf-main-menu" aria-label="<?php esc_attr_e('Sections', 'tnf-news-platform'); ?>">
+					<div class="tnf-main-menu__bar" role="menubar"><?php
+					foreach (tnf_news_nav_items() as $item) {
+						tnf_render_main_menu_link($item);
+					}
+					?></div>
+					<div class="tnf-main-menu__drawer">
 					<?php foreach (tnf_news_nav_sections() as $section) : ?>
 						<?php
 						$accent = isset($section['accent']) && is_string($section['accent']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $section['accent'])
@@ -563,16 +606,14 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 								<span class="tnf-main-menu__section-dot" aria-hidden="true"></span>
 								<p class="tnf-main-menu__section-title" id="<?php echo esc_attr($label_id); ?>"><?php echo esc_html($section['title']); ?></p>
 							</div>
-							<div class="tnf-main-menu__section-links">
-								<?php foreach ($section['items'] as $item) : ?>
-									<a
-										class="tnf-main-menu__link <?php echo tnf_news_nav_url_is_current($item['url']) ? 'is-active' : ''; ?>"
-										href="<?php echo esc_url($item['url']); ?>"
-									><?php echo esc_html($item['label']); ?></a>
-								<?php endforeach; ?>
-							</div>
+							<div class="tnf-main-menu__section-links"><?php
+								foreach ($section['items'] as $item) {
+									tnf_render_main_menu_link($item);
+								}
+								?></div>
 						</div>
 					<?php endforeach; ?>
+					</div>
 				</nav>
 			</div>
 		</div>
