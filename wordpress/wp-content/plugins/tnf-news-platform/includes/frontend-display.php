@@ -1337,13 +1337,17 @@ function tnf_render_video_embed_html(string $url, int $post_id = 0): string {
 		$title    = get_the_title() ?: __( 'Video', 'tnf-news-platform' );
 		$src      = 'https://www.youtube-nocookie.com/embed/' . rawurlencode($yt_id)
 			. '?rel=0&modestbranding=1&playsinline=1';
-		$iframe   = sprintf(
-			'<div class="wp-block-embed__wrapper"><iframe src="%1$s" title="%2$s" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>',
+		$wrapper_attr = $is_short ? ' data-tnf-shorts="1"' : '';
+		$iframe       = sprintf(
+			'<div class="wp-block-embed__wrapper"%3$s><iframe src="%1$s" title="%2$s" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>',
 			esc_url($src),
-			esc_attr($title)
+			esc_attr($title),
+			$wrapper_attr
 		);
 
-		return '<div class="' . esc_attr($wrap_cls) . '">' . $iframe . '</div>';
+		$outer_attr = $is_short ? ' data-tnf-shorts="1"' : '';
+
+		return '<div class="' . esc_attr($wrap_cls) . '"' . $outer_attr . '>' . $iframe . '</div>';
 	}
 
 	$embed = wp_oembed_get($url, array( 'width' => 1280 ));
@@ -1453,9 +1457,10 @@ function tnf_render_block_youtube_embed_aspect(string $block_content, array $blo
 		return $block_content;
 	}
 
-	$replaced = preg_replace(
+	$data_attr = $is_short ? ' data-tnf-shorts="1"' : '';
+	$replaced  = preg_replace(
 		'/<figure(\s+[^>]*class=")([^"]*wp-block-embed[^"]*)(")/',
-		'<figure$1$2 tnf-video-embed ' . $modifier . '$3',
+		'<figure$1$2 tnf-video-embed ' . $modifier . '$3' . $data_attr,
 		$block_content,
 		1
 	);

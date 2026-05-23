@@ -43,31 +43,46 @@
 	padding-bottom: 56.25%;
 }
 
-/* YouTube Shorts — portrait, centred, capped to viewport */
-.tnf-video-embed--shorts {
+/* YouTube Shorts — explicit box sized from viewport (no padding-bottom hack) */
+.tnf-video-embed--shorts,
+.tnf-video-embed[data-tnf-shorts='1'],
+figure.tnf-video-embed--shorts {
+	--tnf-shorts-max-h: min(calc(100dvh - 200px), calc(100svh - 200px), 520px);
+	--tnf-shorts-w: min(100%, calc(var(--tnf-shorts-max-h) * 9 / 16), 400px);
 	display: flex;
 	justify-content: center;
 	width: 100%;
 	max-width: 100%;
-	margin-left: auto;
-	margin-right: auto;
+	margin-inline: auto;
+	overflow: hidden;
+	box-sizing: border-box;
 }
 
-.tnf-video-embed--shorts .wp-block-embed__wrapper {
-	width: min(100%, 420px);
-	max-width: 100%;
-	height: 0;
-	padding-bottom: 177.7778%;
+.tnf-video-embed--shorts .wp-block-embed__wrapper,
+.tnf-video-embed[data-tnf-shorts='1'] .wp-block-embed__wrapper,
+figure.tnf-video-embed--shorts .wp-block-embed__wrapper {
+	position: relative;
+	width: var(--tnf-shorts-w) !important;
+	height: var(--tnf-shorts-max-h) !important;
+	max-width: 100% !important;
+	max-height: var(--tnf-shorts-max-h) !important;
+	padding: 0 !important;
+	padding-bottom: 0 !important;
+	margin-inline: auto;
 	border-radius: 12px;
+	overflow: hidden;
+	background: #0f1320;
 }
 
-@supports (aspect-ratio: 9 / 16) {
-	.tnf-video-embed--shorts .wp-block-embed__wrapper {
-		height: auto;
-		padding-bottom: 0;
-		aspect-ratio: 9 / 16;
-		max-height: min(85vh, 740px);
-	}
+/* WP core adds a 16:9 ::before spacer — breaks portrait Shorts */
+.tnf-video-embed--shorts .wp-block-embed__wrapper::before,
+.tnf-video-embed[data-tnf-shorts='1'] .wp-block-embed__wrapper::before,
+figure.tnf-video-embed--shorts .wp-block-embed__wrapper::before {
+	display: none !important;
+	content: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	height: 0 !important;
 }
 
 /* Legacy embeds without modifier */
