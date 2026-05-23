@@ -21,10 +21,17 @@ define('TNF_CAPACITOR_UA_TOKEN', 'TNFTodayCapacitor');
 function tnf_register_mobile_app(): void {
 	add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_mobile_styles', 40);
 	add_filter('body_class', 'tnf_mobile_app_body_class');
+	add_action('wp_enqueue_scripts', 'tnf_enqueue_page_navigation_loader', 44);
 	add_action('wp_enqueue_scripts', 'tnf_enqueue_mobile_app_assets', 45);
+	add_action('admin_enqueue_scripts', 'tnf_enqueue_admin_page_navigation_loader', 44);
+	add_action('template_redirect', 'tnf_mobile_app_persist_preview_cookie', 0);
+	add_action('wp_footer', 'tnf_mobile_app_render_page_loader_shell', 0);
+	add_action('admin_footer', 'tnf_mobile_app_render_page_loader_shell', 0);
+	add_action('admin_head', 'tnf_mobile_app_resume_loader_script', 2);
 	add_action('wp_footer', 'tnf_mobile_app_render_bottom_nav', 5);
 	add_action('wp_footer', 'tnf_mobile_app_render_offline_shell', 1);
 	add_action('wp_head', 'tnf_mobile_app_viewport_meta', 1);
+	add_action('wp_head', 'tnf_mobile_app_resume_loader_script', 2);
 	add_filter('tnf_mobile_app_enabled', 'tnf_mobile_app_default_enabled', 10, 0);
 	add_action('template_redirect', 'tnf_mobile_app_block_wp_admin', 1);
 }
@@ -32,8 +39,33 @@ function tnf_register_mobile_app(): void {
 /**
  * True when request is from the Capacitor Android shell (or forced for testing).
  */
+/**
+ * Remember ?tnf_app=1 for local/browser mobile testing (not the real APK UA).
+ */
+function tnf_mobile_app_persist_preview_cookie(): void {
+	if (! isset($_GET['tnf_app']) || '1' !== (string) wp_unslash($_GET['tnf_app'])) {
+		return;
+	}
+	if (headers_sent()) {
+		return;
+	}
+	$path   = defined('COOKIEPATH') && COOKIEPATH ? COOKIEPATH : '/';
+	$domain = defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '';
+	setcookie('tnf_app_preview', '1', time() + 14 * DAY_IN_SECONDS, $path, $domain, is_ssl(), true);
+}
+
+/**
+ * @return bool
+ */
+function tnf_mobile_app_preview_cookie_active(): bool {
+	return isset($_COOKIE['tnf_app_preview']) && '1' === (string) wp_unslash($_COOKIE['tnf_app_preview']);
+}
+
 function tnf_is_capacitor_app(): bool {
 	if (isset($_GET['tnf_app']) && '1' === (string) wp_unslash($_GET['tnf_app'])) {
+		return true;
+	}
+	if (tnf_mobile_app_preview_cookie_active()) {
 		return true;
 	}
 
@@ -138,30 +170,48 @@ function tnf_mobile_app_viewport_meta(): void {
 }
 
 /**
- * Enqueue app-only CSS/JS (served from production like all plugin assets).
+ * Whether the logo page loader runs (default on for local QA; filter to disable in production).
  */
-function tnf_enqueue_mobile_app_assets(): void {
-	if (is_admin() || ! tnf_mobile_app_active()) {
+function tnf_page_navigation_loader_enabled(): bool {
+	return (bool) apply_filters('tnf_page_navigation_loader_enabled', true);
+}
+
+/**
+ * Enqueue loader CSS + bridge on the public site (all viewports).
+ */
+function tnf_enqueue_page_navigation_loader(): void {
+	if (is_admin() || ! tnf_page_navigation_loader_enabled()) {
 		return;
 	}
+	tnf_enqueue_navigation_loader_assets(tnf_mobile_app_active());
+}
 
-	$css_path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-mobile-app.css';
+/**
+ * Enqueue loader in wp-admin for editorial users (desktop + mobile CMS).
+ *
+ * @param string $hook_suffix Hook suffix.
+ */
+function tnf_enqueue_admin_page_navigation_loader(string $hook_suffix): void {
+	unset($hook_suffix);
+	if (! current_user_can('edit_posts') || ! tnf_page_navigation_loader_enabled()) {
+		return;
+	}
+	tnf_enqueue_navigation_loader_assets(false);
+}
+
+/**
+ * Shared loader assets (frontend and wp-admin).
+ *
+ * @param bool $is_app True when Capacitor / ?tnf_app=1 app chrome should run.
+ */
+function tnf_enqueue_navigation_loader_assets(bool $is_app): void {
+	$css_path = TNF_NEWS_PLATFORM_PATH . 'assets/css/tnf-page-loader.css';
 	if (is_readable($css_path)) {
 		wp_enqueue_style(
-			'tnf-mobile-app',
-			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-mobile-app.css',
-			array('tnf-frontend-mobile'),
+			'tnf-page-loader',
+			TNF_NEWS_PLATFORM_URL . 'assets/css/tnf-page-loader.css',
+			array(),
 			(string) filemtime($css_path)
-		);
-	}
-
-	$ux_path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-app-experience.css';
-	if (is_readable($ux_path)) {
-		wp_enqueue_style(
-			'tnf-app-experience',
-			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-app-experience.css',
-			array('tnf-mobile-app'),
-			(string) filemtime($ux_path)
 		);
 	}
 
@@ -192,8 +242,12 @@ function tnf_enqueue_mobile_app_assets(): void {
 			'isEditor'    => $is_editor,
 			'cmsUrl'      => $is_editor ? admin_url() : '',
 			'addNewsUrl'  => $is_editor ? admin_url('post-new.php?post_type=tnf_news') : '',
-			'pullRefresh' => true,
+			'pullRefresh' => $is_app,
+			'logoUrl'     => tnf_mobile_app_logo_url(),
+			'appQuery'    => $is_app ? 'tnf_app=1' : '',
+			'isApp'       => $is_app,
 			'i18n'        => array(
+				'loading'      => __('Loading…', 'tnf-news-platform'),
 				'offlineTitle' => __('No internet connection', 'tnf-news-platform'),
 				'offlineBody'  => __('Check your connection and try again.', 'tnf-news-platform'),
 				'retry'        => __('Retry', 'tnf-news-platform'),
@@ -205,6 +259,35 @@ function tnf_enqueue_mobile_app_assets(): void {
 			),
 		)
 	);
+}
+
+/**
+ * Enqueue app-only CSS (served from production like all plugin assets).
+ */
+function tnf_enqueue_mobile_app_assets(): void {
+	if (is_admin() || ! tnf_mobile_app_active()) {
+		return;
+	}
+
+	$css_path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-mobile-app.css';
+	if (is_readable($css_path)) {
+		wp_enqueue_style(
+			'tnf-mobile-app',
+			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-mobile-app.css',
+			array('tnf-frontend-mobile', 'tnf-page-loader'),
+			(string) filemtime($css_path)
+		);
+	}
+
+	$ux_path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-app-experience.css';
+	if (is_readable($ux_path)) {
+		wp_enqueue_style(
+			'tnf-app-experience',
+			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-app-experience.css',
+			array('tnf-mobile-app'),
+			(string) filemtime($ux_path)
+		);
+	}
 }
 
 /**
@@ -254,6 +337,93 @@ function tnf_mobile_app_render_bottom_nav(): void {
 			<span class="tnf-app-bottom-nav__label"><?php esc_html_e('Account', 'tnf-news-platform'); ?></span>
 		</a>
 	</nav>
+	<?php
+}
+
+/**
+ * Site / theme logo for app loading screen.
+ */
+function tnf_mobile_app_logo_url(): string {
+	if (function_exists('tnf_admin_brand_logo_url')) {
+		$url = tnf_admin_brand_logo_url();
+		if ($url !== '') {
+			return $url;
+		}
+	}
+	if (function_exists('get_theme_mod')) {
+		$logo_id = (int) get_theme_mod('custom_logo');
+		if ($logo_id > 0) {
+			$url = wp_get_attachment_image_url($logo_id, 'medium');
+			if (is_string($url) && $url !== '') {
+				return $url;
+			}
+		}
+	}
+	$icon_id = (int) get_option('site_icon');
+	if ($icon_id > 0) {
+		$url = wp_get_attachment_image_url($icon_id, 'medium');
+		if (is_string($url) && $url !== '') {
+			return $url;
+		}
+	}
+	return '';
+}
+
+/**
+ * Full-screen logo loader (top of body for fast paint on navigation).
+ */
+function tnf_mobile_app_render_page_loader_shell(): void {
+	if (! tnf_page_navigation_loader_enabled()) {
+		return;
+	}
+	if (is_admin() && ! current_user_can('edit_posts')) {
+		return;
+	}
+	$logo = tnf_mobile_app_logo_url();
+	?>
+	<div id="tnf-app-page-loader" class="tnf-app-page-loader" hidden aria-live="polite" aria-busy="false" aria-label="<?php esc_attr_e('Loading', 'tnf-news-platform'); ?>">
+		<div class="tnf-app-page-loader__inner">
+			<div class="tnf-app-page-loader__stage">
+				<div class="tnf-app-page-loader__orbit" aria-hidden="true">
+					<span class="tnf-app-page-loader__ring tnf-app-page-loader__ring--outer"></span>
+					<span class="tnf-app-page-loader__ring tnf-app-page-loader__ring--mid"></span>
+					<span class="tnf-app-page-loader__ring tnf-app-page-loader__ring--track"></span>
+					<span class="tnf-app-page-loader__glow"></span>
+				</div>
+				<div class="tnf-app-page-loader__logo-wrap">
+					<?php if ($logo !== '') : ?>
+						<img class="tnf-app-page-loader__logo" src="<?php echo esc_url($logo); ?>" alt="" width="140" height="56" decoding="async" />
+					<?php else : ?>
+						<p class="tnf-app-page-loader__brand"><?php esc_html_e('TNF Today', 'tnf-news-platform'); ?></p>
+					<?php endif; ?>
+				</div>
+			</div>
+			<span class="tnf-app-page-loader__sr"><?php esc_html_e('Loading', 'tnf-news-platform'); ?></span>
+		</div>
+	</div>
+	<?php
+}
+
+/**
+ * If previous tap started navigation, show loader before main paint.
+ */
+function tnf_mobile_app_resume_loader_script(): void {
+	if (! tnf_page_navigation_loader_enabled()) {
+		return;
+	}
+	if (is_admin() && ! current_user_can('edit_posts')) {
+		return;
+	}
+	?>
+	<script id="tnf-app-loader-resume">
+	(function () {
+		try {
+			if (sessionStorage.getItem('tnf_app_nav') === '1') {
+				document.documentElement.classList.add('tnf-app-nav-pending');
+			}
+		} catch (e) {}
+	})();
+	</script>
 	<?php
 }
 

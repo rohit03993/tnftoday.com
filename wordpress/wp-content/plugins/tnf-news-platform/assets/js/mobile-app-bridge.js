@@ -25,6 +25,197 @@
 		}
 	}
 
+	var NAV_KEY = 'tnf_app_nav';
+	var APP_QS = (cfg.appQuery || 'tnf_app=1').replace(/^\?/, '');
+	var loaderHideTimer = null;
+	var loaderShownAt = 0;
+	var LOADER_MIN_MS = 380;
+
+	function getLoaderEl() {
+		return document.getElementById('tnf-app-page-loader');
+	}
+
+	function showPageLoader() {
+		var el = getLoaderEl();
+		if (!el) {
+			return;
+		}
+		loaderShownAt = Date.now();
+		el.removeAttribute('hidden');
+		el.setAttribute('aria-busy', 'true');
+		document.body.classList.add('tnf-app-is-loading');
+		document.documentElement.classList.add('tnf-app-nav-pending');
+		if (loaderHideTimer) {
+			window.clearTimeout(loaderHideTimer);
+			loaderHideTimer = null;
+		}
+	}
+
+	function hidePageLoaderNow() {
+		var el = getLoaderEl();
+		if (el) {
+			el.setAttribute('hidden', '');
+			el.setAttribute('aria-busy', 'false');
+		}
+		document.body.classList.remove('tnf-app-is-loading');
+		document.documentElement.classList.remove('tnf-app-nav-pending');
+		try {
+			sessionStorage.removeItem(NAV_KEY);
+		} catch (e) {}
+	}
+
+	function hidePageLoader() {
+		var wait = Math.max(0, LOADER_MIN_MS - (Date.now() - loaderShownAt));
+		window.setTimeout(hidePageLoaderNow, wait);
+	}
+
+	function ensureAppQueryOnUrl(url) {
+		try {
+			var u = new URL(url, window.location.href);
+			if (u.origin !== window.location.origin) {
+				return url;
+			}
+			if (!u.searchParams.has('tnf_app')) {
+				u.searchParams.set('tnf_app', '1');
+			}
+			return u.pathname + u.search + u.hash;
+		} catch (e) {
+			return url;
+		}
+	}
+
+	function patchInternalLinks() {
+		if (!cfg.isApp || !APP_QS) {
+			return;
+		}
+		document.querySelectorAll('a[href]').forEach(function (anchor) {
+			var href = anchor.getAttribute('href');
+			if (!href || href.indexOf('mailto:') === 0 || href.indexOf('tel:') === 0 || href.charAt(0) === '#') {
+				return;
+			}
+			if (anchor.hasAttribute('data-tnf-open-browser')) {
+				return;
+			}
+			if (isExternalUrl(href)) {
+				return;
+			}
+			var next = ensureAppQueryOnUrl(href);
+			if (next !== href) {
+				anchor.setAttribute('href', next);
+			}
+		});
+	}
+
+	function markNavStarted() {
+		try {
+			sessionStorage.setItem(NAV_KEY, '1');
+		} catch (e) {}
+		showPageLoader();
+	}
+
+	function isSamePageNavigation(url) {
+		try {
+			var next = new URL(url, window.location.href);
+			var cur = new URL(window.location.href);
+			return next.href === cur.href;
+		} catch (e) {
+			return false;
+		}
+	}
+
+	function shouldShowLoaderForLink(anchor, href) {
+		if (!href || href.indexOf('mailto:') === 0 || href.indexOf('tel:') === 0) {
+			return false;
+		}
+		if (href.charAt(0) === '#') {
+			return false;
+		}
+		if (anchor.hasAttribute('data-tnf-open-browser')) {
+			return false;
+		}
+		if (anchor.getAttribute('target') === '_blank') {
+			return false;
+		}
+		if (anchor.hasAttribute('download')) {
+			return false;
+		}
+		if (isExternalUrl(href)) {
+			return false;
+		}
+		if (isSamePageNavigation(href)) {
+			return false;
+		}
+		return true;
+	}
+
+	function initPageLoader() {
+		if (getLoaderEl()) {
+			try {
+				if (sessionStorage.getItem(NAV_KEY) === '1') {
+					showPageLoader();
+				}
+			} catch (e) {}
+		}
+
+		window.addEventListener('pageshow', function () {
+			if (document.readyState === 'complete') {
+				hidePageLoader();
+			}
+		});
+
+		window.addEventListener('load', function () {
+			hidePageLoader();
+		});
+
+		loaderHideTimer = window.setTimeout(hidePageLoader, 15000);
+
+		document.addEventListener(
+			'click',
+			function (event) {
+				var target = event.target;
+				if (!(target instanceof Element)) {
+					return;
+				}
+				var anchor = target.closest('a[href]');
+				if (!anchor) {
+					return;
+				}
+				var href = anchor.getAttribute('href');
+				if (!shouldShowLoaderForLink(anchor, href)) {
+					return;
+				}
+				if (cfg.isApp) {
+					var nextHref = ensureAppQueryOnUrl(href);
+					if (nextHref !== href) {
+						anchor.setAttribute('href', nextHref);
+					}
+					hapticLight();
+				}
+				markNavStarted();
+			},
+			true
+		);
+
+		document.addEventListener(
+			'submit',
+			function (event) {
+				var form = event.target;
+				if (!(form instanceof HTMLFormElement)) {
+					return;
+				}
+				if (form.target === '_blank') {
+					return;
+				}
+				var action = form.getAttribute('action') || window.location.href;
+				if (isExternalUrl(action)) {
+					return;
+				}
+				markNavStarted();
+			},
+			true
+		);
+	}
+
 	function initNativeChrome() {
 		var StatusBar = plugin('StatusBar');
 		if (StatusBar) {
@@ -221,8 +412,14 @@
 
 	function initBottomNav() {
 		document.querySelectorAll('.tnf-app-bottom-nav__item[data-tnf-nav]').forEach(function (item) {
-			item.addEventListener('click', function () {
-				hapticLight();
+			item.addEventListener('click', function (e) {
+				var href = item.getAttribute('href');
+				if (href && shouldShowLoaderForLink(item, href)) {
+					hapticLight();
+					markNavStarted();
+				} else {
+					hapticLight();
+				}
 			});
 		});
 
@@ -329,18 +526,25 @@
 	}
 
 	document.addEventListener('DOMContentLoaded', function () {
-		if (!document.body.classList.contains('tnf-capacitor-app')) {
+		initPageLoader();
+
+		if (!cfg.isApp && !document.body.classList.contains('tnf-capacitor-app')) {
 			return;
 		}
+
 		initNativeChrome();
 		handleExternalLinks();
 		initNetwork();
 		initBottomNav();
 		initPullToRefresh();
 		initLazyImages();
+		patchInternalLinks();
 
 		runWhenIdle(function () {
+			patchInternalLinks();
 			initPushNotifications();
 		}, 4000);
+
+		document.addEventListener('DOMContentLoaded', patchInternalLinks);
 	});
 })();

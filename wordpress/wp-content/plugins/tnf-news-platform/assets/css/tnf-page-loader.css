@@ -1,0 +1,190 @@
+/**
+ * TNF page navigation loader — logo centered inside animated rings.
+ */
+
+.tnf-app-page-loader {
+	--tnf-loader-brand: #bc1e38;
+	--tnf-loader-brand-light: #f04d66;
+	--tnf-loader-track: rgba(188, 30, 56, 0.12);
+	position: fixed;
+	inset: 0;
+	z-index: 100090;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	background: #ffffff;
+}
+
+.tnf-app-page-loader[hidden] {
+	display: none !important;
+}
+
+html.tnf-app-nav-pending .tnf-app-page-loader {
+	display: flex !important;
+}
+
+html.tnf-app-nav-pending .tnf-app-page-loader[hidden] {
+	display: flex !important;
+}
+
+body.tnf-app-is-loading {
+	overflow: hidden;
+}
+
+.tnf-app-page-loader__inner {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.tnf-app-page-loader__stage {
+	position: relative;
+	width: min(172px, 54vw);
+	height: min(172px, 54vw);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.tnf-app-page-loader__orbit {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.tnf-app-page-loader__ring {
+	position: absolute;
+	border-radius: 50%;
+}
+
+.tnf-app-page-loader__ring--outer {
+	inset: 0;
+	background: conic-gradient(
+		from 0deg,
+		var(--tnf-loader-track) 0deg,
+		var(--tnf-loader-track) 285deg,
+		var(--tnf-loader-brand) 318deg,
+		var(--tnf-loader-brand-light) 360deg
+	);
+	-webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+	mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+	animation: tnf-loader-orbit 1.1s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+}
+
+.tnf-app-page-loader__ring--mid {
+	inset: 9px;
+	background: conic-gradient(
+		from 200deg,
+		transparent 0deg,
+		transparent 210deg,
+		rgba(188, 30, 56, 0.35) 255deg,
+		var(--tnf-loader-brand) 305deg,
+		transparent 360deg
+	);
+	-webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+	mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+	animation: tnf-loader-orbit-reverse 1.65s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+}
+
+.tnf-app-page-loader__ring--track {
+	inset: 16px;
+	border: 2px solid var(--tnf-loader-track);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+	animation: tnf-loader-track-pulse 2.2s ease-in-out infinite;
+}
+
+.tnf-app-page-loader__glow {
+	position: absolute;
+	inset: 12px;
+	border-radius: 50%;
+	background: radial-gradient(circle, rgba(188, 30, 56, 0.14) 0%, transparent 72%);
+	animation: tnf-loader-glow 1.9s ease-in-out infinite;
+}
+
+.tnf-app-page-loader__logo-wrap {
+	position: relative;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 10px 14px;
+	animation: tnf-loader-logo-breathe 2.4s ease-in-out infinite;
+}
+
+.tnf-app-page-loader__logo {
+	display: block;
+	max-width: min(128px, 38vw);
+	max-height: 58px;
+	width: auto;
+	height: auto;
+	object-fit: contain;
+}
+
+.tnf-app-page-loader__brand {
+	margin: 0;
+	font-size: 1.35rem;
+	font-weight: 800;
+	color: var(--tnf-loader-brand);
+	letter-spacing: 0.04em;
+	line-height: 1.2;
+	text-align: center;
+}
+
+.tnf-app-page-loader__sr {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+@keyframes tnf-loader-orbit {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes tnf-loader-orbit-reverse {
+	to {
+		transform: rotate(-360deg);
+	}
+}
+
+@keyframes tnf-loader-track-pulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.72;
+		transform: scale(0.985);
+	}
+}
+
+@keyframes tnf-loader-glow {
+	0%,
+	100% {
+		opacity: 0.55;
+		transform: scale(0.96);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.04);
+	}
+}
+
+@keyframes tnf-loader-logo-breathe {
+	0%,
+	100% {
+		transform: scale(1);
+	}
+	50% {
+		transform: scale(1.03);
+	}
+}

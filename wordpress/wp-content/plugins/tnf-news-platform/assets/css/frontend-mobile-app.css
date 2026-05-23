@@ -105,6 +105,8 @@
 	white-space: nowrap;
 }
 
+/* Page navigation loader — see tnf-page-loader.css */
+
 /* Offline overlay */
 .tnf-app-offline {
 	position: fixed;
