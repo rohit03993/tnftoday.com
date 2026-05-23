@@ -842,7 +842,7 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 			</a>
 		<?php endif; ?>
 
-		<?php if ($topic_pills !== array()) : ?>
+		<?php if ($topic_pills !== array() && (! function_exists('tnf_mobile_app_active') || ! tnf_mobile_app_active())) : ?>
 			<div class="tnf-chrome-topics" role="navigation" aria-label="<?php esc_attr_e('Trending topics', 'tnf-news-platform'); ?>">
 				<div class="tnf-shell tnf-chrome-topics__inner">
 					<button type="button" class="tnf-chrome-topics__scroll tnf-chrome-topics__scroll--prev" data-tnf-topics-scroll="prev" aria-label="<?php esc_attr_e('Scroll topics left', 'tnf-news-platform'); ?>">‹</button>

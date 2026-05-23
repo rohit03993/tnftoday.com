@@ -60,7 +60,12 @@
 /* Reserve space for bottom tab bar */
 .tnf-capacitor-app body,
 .tnf-capacitor-app {
-	--tnf-app-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
+	--tnf-app-nav-height: calc(64px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Trending topic pills — web only, not in native app shell */
+.tnf-capacitor-app .tnf-chrome-topics {
+	display: none !important;
 }
 
 body.tnf-capacitor-app {
@@ -91,7 +96,7 @@ body.tnf-capacitor-app {
 	display: grid;
 	grid-template-columns: repeat(5, 1fr);
 	align-items: stretch;
-	min-height: 56px;
+	min-height: 64px;
 	padding-bottom: env(safe-area-inset-bottom, 0px);
 	background: rgba(255, 255, 255, 0.96);
 	border-top: 1px solid rgba(15, 19, 32, 0.1);
@@ -109,13 +114,13 @@ body.tnf-capacitor-app {
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	gap: 2px;
-	padding: 6px 4px 8px;
+	gap: 4px;
+	padding: 8px 4px 10px;
 	border: 0;
 	background: transparent;
 	color: #4a5568;
 	text-decoration: none;
-	font-size: 10px;
+	font-size: 11px;
 	font-weight: 600;
 	line-height: 1.2;
 	cursor: pointer;
@@ -139,15 +144,15 @@ body.tnf-capacitor-app {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 24px;
-	height: 22px;
+	width: 28px;
+	height: 26px;
 	line-height: 0;
 }
 
 .tnf-app-bottom-nav__icon svg {
 	display: block;
-	width: 22px;
-	height: 22px;
+	width: 26px;
+	height: 26px;
 }
 
 .tnf-app-bottom-nav__label {
@@ -158,7 +163,7 @@ body.tnf-capacitor-app {
 }
 
 .tnf-app-bottom-nav__item.is-signed-in .tnf-app-bottom-nav__label {
-	font-size: 9px;
+	font-size: 10px;
 }
 
 .tnf-capacitor-app .tnf-chrome-head__tools .tnf-chrome-tool--signin {
