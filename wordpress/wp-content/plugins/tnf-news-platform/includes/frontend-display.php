@@ -21,6 +21,7 @@ add_filter('render_block', 'tnf_render_block_youtube_embed_aspect', 11, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_header_aajtak_styles', 40);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
+add_action('wp_enqueue_scripts', 'tnf_enqueue_shorts_embed_assets', 50);
 /**
  * Enqueue header/footer chrome CSS (templates using shortcodes or shared classes).
  */
@@ -1346,8 +1347,13 @@ function tnf_render_video_embed_html(string $url, int $post_id = 0): string {
 		);
 
 		$outer_attr = $is_short ? ' data-tnf-shorts="1"' : '';
+		$inner      = '<div class="' . esc_attr($wrap_cls) . '"' . $outer_attr . '>' . $iframe . '</div>';
 
-		return '<div class="' . esc_attr($wrap_cls) . '"' . $outer_attr . '>' . $iframe . '</div>';
+		if ($is_short) {
+			return '<div class="tnf-shorts-player"><div class="tnf-shorts-player__frame">' . $inner . '</div></div>';
+		}
+
+		return $inner;
 	}
 
 	$embed = wp_oembed_get($url, array( 'width' => 1280 ));
@@ -1458,14 +1464,22 @@ function tnf_render_block_youtube_embed_aspect(string $block_content, array $blo
 	}
 
 	$data_attr = $is_short ? ' data-tnf-shorts="1"' : '';
-	$replaced  = preg_replace(
+	$replaced = preg_replace(
 		'/<figure(\s+[^>]*class=")([^"]*wp-block-embed[^"]*)(")/',
 		'<figure$1$2 tnf-video-embed ' . $modifier . '$3' . $data_attr,
 		$block_content,
 		1
 	);
 
-	return is_string($replaced) && $replaced !== '' ? $replaced : $block_content;
+	if (! is_string($replaced) || $replaced === '') {
+		return $block_content;
+	}
+
+	if ($is_short && ! str_contains($replaced, 'tnf-shorts-player')) {
+		return '<div class="tnf-shorts-player"><div class="tnf-shorts-player__frame">' . $replaced . '</div></div>';
+	}
+
+	return $replaced;
 }
 
 /**
@@ -2162,6 +2176,43 @@ function tnf_news_content_with_category_rail(string $content): string {
 	$byline_share = '<div class="tnf-news-byline-share">' . $byline . $share . '</div>';
 
 	return '<div class="tnf-news-content-layout"><div class="tnf-news-content-body">' . $meta . $byline_share . $content . $related_html . '</div></div>' . $copy_js;
+}
+
+/**
+ * Shorts player CSS/JS — must load after mobile + block library embed rules.
+ */
+function tnf_enqueue_shorts_embed_assets(): void {
+	if (is_admin() || ! is_singular('tnf_video')) {
+		return;
+	}
+
+	$deps = array('tnf-single-news', 'wp-block-library');
+	foreach (array('tnf-frontend-mobile', 'tnf-mobile-app', 'tnf-child-home-news', 'tnf-frontend-chrome') as $handle) {
+		if (wp_style_is($handle, 'registered') || wp_style_is($handle, 'enqueued')) {
+			$deps[] = $handle;
+		}
+	}
+
+	$shorts_css = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-shorts-embed.css';
+	if (is_readable($shorts_css)) {
+		wp_enqueue_style(
+			'tnf-shorts-embed',
+			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-shorts-embed.css',
+			array_values(array_unique($deps)),
+			(string) filemtime($shorts_css)
+		);
+	}
+
+	$shorts_js = TNF_NEWS_PLATFORM_PATH . 'assets/js/frontend-shorts-fit.js';
+	if (is_readable($shorts_js)) {
+		wp_enqueue_script(
+			'tnf-shorts-fit',
+			TNF_NEWS_PLATFORM_URL . 'assets/js/frontend-shorts-fit.js',
+			array(),
+			(string) filemtime($shorts_js),
+			true
+		);
+	}
 }
 
 /**
