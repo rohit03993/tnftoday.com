@@ -21,7 +21,7 @@ add_filter('render_block', 'tnf_render_block_youtube_embed_aspect', 11, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_header_aajtak_styles', 40);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
-add_action('wp_enqueue_scripts', 'tnf_enqueue_shorts_embed_assets', 50);
+add_action('wp_enqueue_scripts', 'tnf_enqueue_video_embed_assets', 50);
 /**
  * Enqueue header/footer chrome CSS (templates using shortcodes or shared classes).
  */
@@ -1347,13 +1347,11 @@ function tnf_render_video_embed_html(string $url, int $post_id = 0): string {
 		);
 
 		$outer_attr = $is_short ? ' data-tnf-shorts="1"' : '';
-		$inner      = '<div class="' . esc_attr($wrap_cls) . '"' . $outer_attr . '>' . $iframe . '</div>';
+		$inner = '<div class="' . esc_attr($wrap_cls) . '"' . $outer_attr . '>' . $iframe . '</div>';
+		$mode  = $is_short ? 'portrait' : 'landscape';
 
-		if ($is_short) {
-			return '<div class="tnf-shorts-player"><div class="tnf-shorts-player__frame">' . $inner . '</div></div>';
-		}
-
-		return $inner;
+		return '<div class="tnf-video-player tnf-video-player--' . esc_attr($mode) . '" data-tnf-video="' . esc_attr($mode) . '">'
+			. '<div class="tnf-video-player__ratio">' . $inner . '</div></div>';
 	}
 
 	$embed = wp_oembed_get($url, array( 'width' => 1280 ));
@@ -1361,7 +1359,10 @@ function tnf_render_video_embed_html(string $url, int $post_id = 0): string {
 		return '';
 	}
 
-	return '<div class="tnf-video-embed tnf-video-embed--landscape wp-block-embed is-type-video">' . $embed . '</div>';
+	$inner = '<div class="tnf-video-embed tnf-video-embed--landscape wp-block-embed is-type-video">' . $embed . '</div>';
+
+	return '<div class="tnf-video-player tnf-video-player--landscape" data-tnf-video="landscape">'
+		. '<div class="tnf-video-player__ratio">' . $inner . '</div></div>';
 }
 
 /**
@@ -1475,8 +1476,10 @@ function tnf_render_block_youtube_embed_aspect(string $block_content, array $blo
 		return $block_content;
 	}
 
-	if ($is_short && ! str_contains($replaced, 'tnf-shorts-player')) {
-		return '<div class="tnf-shorts-player"><div class="tnf-shorts-player__frame">' . $replaced . '</div></div>';
+	if (! str_contains($replaced, 'tnf-video-player')) {
+		$mode = $is_short ? 'portrait' : 'landscape';
+		return '<div class="tnf-video-player tnf-video-player--' . esc_attr($mode) . '" data-tnf-video="' . esc_attr($mode) . '">'
+			. '<div class="tnf-video-player__ratio">' . $replaced . '</div></div>';
 	}
 
 	return $replaced;
@@ -2179,10 +2182,13 @@ function tnf_news_content_with_category_rail(string $content): string {
 }
 
 /**
- * Shorts player CSS/JS — must load after mobile + block library embed rules.
+ * Video embed CSS — one file, loads after mobile + block library.
  */
-function tnf_enqueue_shorts_embed_assets(): void {
-	if (is_admin() || ! is_singular('tnf_video')) {
+function tnf_enqueue_video_embed_assets(): void {
+	if (is_admin()) {
+		return;
+	}
+	if (! is_singular('tnf_video') && ! tnf_is_news_article_singular()) {
 		return;
 	}
 
@@ -2193,26 +2199,17 @@ function tnf_enqueue_shorts_embed_assets(): void {
 		}
 	}
 
-	$shorts_css = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-shorts-embed.css';
-	if (is_readable($shorts_css)) {
-		wp_enqueue_style(
-			'tnf-shorts-embed',
-			TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-shorts-embed.css',
-			array_values(array_unique($deps)),
-			(string) filemtime($shorts_css)
-		);
+	$path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-video-embed.css';
+	if (! is_readable($path)) {
+		return;
 	}
 
-	$shorts_js = TNF_NEWS_PLATFORM_PATH . 'assets/js/frontend-shorts-fit.js';
-	if (is_readable($shorts_js)) {
-		wp_enqueue_script(
-			'tnf-shorts-fit',
-			TNF_NEWS_PLATFORM_URL . 'assets/js/frontend-shorts-fit.js',
-			array(),
-			(string) filemtime($shorts_js),
-			true
-		);
-	}
+	wp_enqueue_style(
+		'tnf-video-embed',
+		TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-video-embed.css',
+		array_values(array_unique($deps)),
+		(string) filemtime($path)
+	);
 }
 
 /**

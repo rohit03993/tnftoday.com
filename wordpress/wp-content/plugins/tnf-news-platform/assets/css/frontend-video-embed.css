@@ -1,0 +1,142 @@
+/**
+ * TNF video embeds — single responsive system (landscape + Shorts).
+ * Loads after block library / mobile CSS. No negative margins, no transform hacks.
+ */
+
+.single-tnf_video .entry-content,
+.single-tnf_video .wp-block-post-content,
+.single-tnf_video .tnf-single-tnf-video,
+.single-tnf_video .alignfull {
+	max-width: 100%;
+	overflow-x: clip;
+	box-sizing: border-box;
+}
+
+/* Player shell */
+.tnf-video-player {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	margin: 0 auto 1.25rem;
+	padding: 0;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.tnf-video-player__ratio {
+	position: relative;
+	width: 100%;
+	max-width: 100%;
+	height: 0;
+	margin: 0 auto;
+	overflow: hidden;
+	background: #0f1320;
+	border-radius: 12px;
+}
+
+.tnf-video-player--landscape .tnf-video-player__ratio {
+	padding-bottom: 56.25%;
+	border-radius: 12px;
+}
+
+.tnf-video-player--portrait {
+	width: 100%;
+	max-width: min(400px, 100%);
+	margin-inline: auto;
+}
+
+.tnf-video-player--portrait .tnf-video-player__ratio {
+	padding-bottom: 177.7778%;
+}
+
+/* Everything inside the ratio box fills it exactly */
+.tnf-video-player__ratio > .tnf-video-embed,
+.tnf-video-player__ratio > .wp-block-embed,
+.tnf-video-player__ratio > figure.wp-block-embed {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	transform: none;
+	aspect-ratio: unset;
+}
+
+.tnf-video-player__ratio .wp-block-embed__wrapper {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	padding: 0 !important;
+	padding-bottom: 0 !important;
+	margin: 0 !important;
+	overflow: hidden;
+	background: transparent;
+}
+
+.tnf-video-player__ratio .wp-block-embed__wrapper::before,
+.tnf-video-player__ratio .wp-block-embed__wrapper::after {
+	display: none !important;
+	content: none !important;
+	padding: 0 !important;
+	margin: 0 !important;
+	height: 0 !important;
+	width: 0 !important;
+}
+
+.tnf-video-player__ratio iframe {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100% !important;
+	height: 100% !important;
+	max-width: 100% !important;
+	max-height: 100% !important;
+	min-width: 0 !important;
+	min-height: 0 !important;
+	border: 0 !important;
+}
+
+/* News articles with optional video meta */
+.tnf-news-embed .tnf-video-player {
+	margin-top: 0;
+}
+
+@media (max-width: 900px) {
+	.single-tnf_video .tnf-video-player {
+		padding-left: max(14px, env(safe-area-inset-left));
+		padding-right: max(14px, env(safe-area-inset-right));
+		box-sizing: border-box;
+	}
+
+	.single-tnf_video .tnf-video-player--landscape .tnf-video-player__ratio {
+		border-radius: 10px;
+	}
+
+	.single-tnf_video .tnf-video-player--portrait .tnf-video-player__ratio {
+		width: 100%;
+		max-width: min(400px, calc(100vw - max(14px, env(safe-area-inset-left)) - max(14px, env(safe-area-inset-right))));
+		padding-bottom: 0;
+		height: auto;
+		aspect-ratio: 9 / 16;
+		max-height: min(calc(100svh - 220px), calc(100dvh - 220px), 560px);
+	}
+}
+
+.tnf-capacitor-app .tnf-video-player--portrait .tnf-video-player__ratio {
+	max-height: min(
+		calc(100svh - var(--tnf-app-nav-height, 64px) - 150px),
+		calc(100dvh - var(--tnf-app-nav-height, 64px) - 150px),
+		560px
+	);
+}
