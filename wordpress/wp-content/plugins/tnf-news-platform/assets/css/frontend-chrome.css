@@ -3,9 +3,9 @@
  */
 
 .tnf-shell {
-	max-width: min(1360px, 100%);
+	max-width: 1270px;
 	margin: 0 auto;
-	padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+	padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
 }
 
 .tnf-site-chrome {
