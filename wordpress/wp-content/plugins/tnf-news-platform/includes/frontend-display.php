@@ -21,7 +21,7 @@ add_filter('render_block', 'tnf_render_block_youtube_embed_aspect', 11, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_header_aajtak_styles', 40);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
-add_action('wp_enqueue_scripts', 'tnf_enqueue_video_embed_assets', 50);
+add_action('wp_enqueue_scripts', 'tnf_enqueue_video_embed_assets', 99);
 /**
  * Enqueue header/footer chrome CSS (templates using shortcodes or shared classes).
  */

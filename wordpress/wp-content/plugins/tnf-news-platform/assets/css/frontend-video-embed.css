@@ -1,14 +1,58 @@
 /**
  * TNF video embeds — single responsive system (landscape + Shorts).
- * Loads after block library / mobile CSS. No negative margins, no transform hacks.
+ * Loads last. No negative margins, no transform hacks.
  */
 
-.single-tnf_video .entry-content,
-.single-tnf_video .wp-block-post-content,
+/* ----- Video single: stop WordPress alignfull viewport breakout ----- */
 .single-tnf_video .tnf-single-tnf-video,
-.single-tnf_video .alignfull {
+.single-tnf_video main.tnf-single-tnf-video {
 	max-width: 100%;
 	overflow-x: clip;
+	box-sizing: border-box;
+}
+
+.single-tnf_video .tnf-single-tnf-video > .alignfull,
+.single-tnf_video .tnf-single-tnf-video > .wp-block-group.alignfull,
+.single-tnf_video main.tnf-single-tnf-video > .alignfull,
+.single-tnf_video main.tnf-single-tnf-video > .wp-block-group.alignfull {
+	max-width: min(1120px, 100%);
+	width: 100%;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	padding-left: clamp(14px, 4vw, 28px) !important;
+	padding-right: clamp(14px, 4vw, 28px) !important;
+	box-sizing: border-box;
+}
+
+.single-tnf_video .tnf-single-tnf-video .entry-content,
+.single-tnf_video .tnf-single-tnf-video .wp-block-post-content,
+.single-tnf_video .tnf-single-tnf-video .entry-content.alignfull,
+.single-tnf_video .tnf-single-tnf-video .wp-block-post-content.alignfull,
+.single-tnf_video .tnf-single-tnf-video .is-layout-constrained > .alignfull,
+.single-tnf_video .tnf-single-tnf-video .is-layout-constrained > .alignwide {
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	box-sizing: border-box;
+	overflow-x: clip;
+}
+
+.single-tnf_video .tnf-single-tnf-video > .alignfull > .wp-block-post-title,
+.single-tnf_video .tnf-single-tnf-video > .alignfull > .entry-title {
+	box-sizing: border-box;
+	width: 100% !important;
+	max-width: 100% !important;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
+.single-tnf_video .tnf-video-related,
+.single-tnf_video .tnf-news-related.tnf-video-related {
+	width: 100%;
+	max-width: 100%;
+	margin-left: 0;
+	margin-right: 0;
 	box-sizing: border-box;
 }
 
@@ -107,15 +151,38 @@
 	border: 0 !important;
 }
 
+/* Raw block embeds in post body (no tnf-video-player wrapper) */
+.single-tnf_video .entry-content .wp-block-embed,
+.single-tnf_video .wp-block-post-content .wp-block-embed {
+	width: 100%;
+	max-width: 100%;
+	margin-left: 0;
+	margin-right: 0;
+	box-sizing: border-box;
+}
+
+.single-tnf_video .entry-content .wp-block-embed iframe,
+.single-tnf_video .wp-block-post-content .wp-block-embed iframe {
+	max-width: 100%;
+}
+
 /* News articles with optional video meta */
 .tnf-news-embed .tnf-video-player {
 	margin-top: 0;
 }
 
 @media (max-width: 900px) {
+	.single-tnf_video .tnf-single-tnf-video > .alignfull,
+	.single-tnf_video .tnf-single-tnf-video > .wp-block-group.alignfull,
+	.single-tnf_video main.tnf-single-tnf-video > .alignfull,
+	.single-tnf_video main.tnf-single-tnf-video > .wp-block-group.alignfull {
+		padding-left: max(14px, env(safe-area-inset-left)) !important;
+		padding-right: max(14px, env(safe-area-inset-right)) !important;
+	}
+
 	.single-tnf_video .tnf-video-player {
-		padding-left: max(14px, env(safe-area-inset-left));
-		padding-right: max(14px, env(safe-area-inset-right));
+		padding-left: 0;
+		padding-right: 0;
 		box-sizing: border-box;
 	}
 
@@ -125,7 +192,7 @@
 
 	.single-tnf_video .tnf-video-player--portrait .tnf-video-player__ratio {
 		width: 100%;
-		max-width: min(400px, calc(100vw - max(14px, env(safe-area-inset-left)) - max(14px, env(safe-area-inset-right))));
+		max-width: min(400px, 100%);
 		padding-bottom: 0;
 		height: auto;
 		aspect-ratio: 9 / 16;
