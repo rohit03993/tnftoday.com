@@ -2,58 +2,103 @@
  * TNF news / video singles: layout, embed, share rail.
  */
 
-.tnf-video-embed {
+/* Video player canvas — keeps YouTube / Shorts inside the layout (app + web) */
+.tnf-video-embed,
+.tnf-news-embed {
+	box-sizing: border-box;
+	max-width: 100%;
 	margin-bottom: 1.25rem;
+	overflow: hidden;
 }
 
 .tnf-video-embed .wp-block-embed__wrapper {
 	position: relative;
 	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	background: #0f1320;
 }
 
-.tnf-video-embed--landscape .wp-block-embed__wrapper,
-.tnf-video-embed--landscape iframe {
+.tnf-video-embed iframe {
+	position: absolute;
+	inset: 0;
+	display: block;
+	width: 100% !important;
+	height: 100% !important;
+	max-width: 100% !important;
+	max-height: 100% !important;
+	min-height: 0 !important;
+	border: 0;
+	aspect-ratio: unset !important;
+}
+
+/* Landscape 16:9 */
+.tnf-video-embed--landscape {
 	width: 100%;
 	max-width: 100%;
-	aspect-ratio: 16 / 9;
-	height: auto;
-	min-height: 200px;
 }
 
-.tnf-video-embed--landscape iframe {
-	display: block;
-	border: 0;
+.tnf-video-embed--landscape .wp-block-embed__wrapper {
+	height: 0;
+	padding-bottom: 56.25%;
 }
 
-/* YouTube Shorts / vertical video — one portrait player, centred */
+/* YouTube Shorts — portrait, centred, capped to viewport */
 .tnf-video-embed--shorts {
-	max-width: min(100%, 420px);
+	display: flex;
+	justify-content: center;
+	width: 100%;
+	max-width: 100%;
 	margin-left: auto;
 	margin-right: auto;
 }
 
-.tnf-video-embed--shorts .wp-block-embed__wrapper,
-.tnf-video-embed--shorts iframe {
-	width: 100%;
+.tnf-video-embed--shorts .wp-block-embed__wrapper {
+	width: min(100%, 420px);
 	max-width: 100%;
-	aspect-ratio: 9 / 16;
-	height: auto;
-	min-height: 0;
-	max-height: min(85vh, 740px);
+	height: 0;
+	padding-bottom: 177.7778%;
+	border-radius: 12px;
 }
 
-.tnf-video-embed--shorts iframe {
-	display: block;
-	border: 0;
+@supports (aspect-ratio: 9 / 16) {
+	.tnf-video-embed--shorts .wp-block-embed__wrapper {
+		height: auto;
+		padding-bottom: 0;
+		aspect-ratio: 9 / 16;
+		max-height: min(85vh, 740px);
+	}
 }
 
 /* Legacy embeds without modifier */
-.tnf-video-embed:not(.tnf-video-embed--shorts):not(.tnf-video-embed--landscape) iframe {
-	width: 100%;
+.tnf-video-embed:not(.tnf-video-embed--shorts):not(.tnf-video-embed--landscape) .wp-block-embed__wrapper {
+	height: 0;
+	padding-bottom: 56.25%;
+}
+
+.single-tnf_video .tnf-single-tnf-video,
+.single-tnf_video .entry-content,
+.single-tnf_video .wp-block-post-content {
 	max-width: 100%;
-	aspect-ratio: 16 / 9;
-	height: auto;
-	min-height: 240px;
+	overflow-x: clip;
+}
+
+.single-tnf_video .entry-content .wp-block-embed,
+.single-tnf_video .wp-block-post-content .wp-block-embed {
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.single-tnf_video .entry-content .wp-block-embed .wp-block-embed__wrapper,
+.single-tnf_video .wp-block-post-content .wp-block-embed .wp-block-embed__wrapper {
+	position: relative;
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.single-tnf_video .entry-content .wp-block-embed iframe,
+.single-tnf_video .wp-block-post-content .wp-block-embed iframe {
+	max-width: 100% !important;
 }
 
 .single-tnf_video .tnf-video-related {

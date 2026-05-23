@@ -17,6 +17,7 @@ add_filter('the_content', 'tnf_video_single_append_related', 12);
 add_filter('render_block', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_filter('render_block_core/post-featured-image', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_filter('render_block', 'tnf_render_block_hide_duplicate_video_embed', 10, 2);
+add_filter('render_block', 'tnf_render_block_youtube_embed_aspect', 11, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_header_aajtak_styles', 40);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
@@ -1257,7 +1258,7 @@ function tnf_prepend_news_embed(string $content): string {
 		return $content;
 	}
 
-	$embed_html = tnf_render_video_embed_html($url);
+	$embed_html = tnf_render_video_embed_html($url, (int) get_the_ID());
 	if ($embed_html === '') {
 		return $content;
 	}
@@ -1290,7 +1291,8 @@ function tnf_prepend_video_embed(string $content): string {
 		return $content;
 	}
 
-	$embed_html = tnf_render_video_embed_html($url);
+	$post_id    = (int) get_the_ID();
+	$embed_html = tnf_render_video_embed_html($url, $post_id);
 	if ($embed_html === '') {
 		return $content;
 	}
@@ -1314,8 +1316,11 @@ function tnf_youtube_is_shorts_url(string $url): bool {
 
 /**
  * Single video player markup (YouTube / Shorts-aware; oEmbed fallback for other hosts).
+ *
+ * @param string $url     Video URL.
+ * @param int    $post_id Optional post ID for Shorts detection (metabox + content).
  */
-function tnf_render_video_embed_html(string $url): string {
+function tnf_render_video_embed_html(string $url, int $post_id = 0): string {
 	$url = trim($url);
 	if ($url === '') {
 		return '';
@@ -1324,6 +1329,9 @@ function tnf_render_video_embed_html(string $url): string {
 	$yt_id = tnf_youtube_id_from_url($url);
 	if ($yt_id !== '') {
 		$is_short = tnf_youtube_is_shorts_url($url);
+		if (! $is_short && $post_id > 0) {
+			$is_short = tnf_video_card_is_shorts($post_id);
+		}
 		$wrap_cls = 'tnf-video-embed wp-block-embed is-type-video is-provider-youtube'
 			. ( $is_short ? ' tnf-video-embed--shorts' : ' tnf-video-embed--landscape' );
 		$title    = get_the_title() ?: __( 'Video', 'tnf-news-platform' );
@@ -1411,6 +1419,48 @@ function tnf_render_block_hide_duplicate_video_embed(string $block_content, arra
 	}
 
 	return $block_content;
+}
+
+/**
+ * Add landscape / Shorts classes to core YouTube embed blocks (editor content).
+ *
+ * @param string $block_content Block HTML.
+ * @param array  $block         Block.
+ */
+function tnf_render_block_youtube_embed_aspect(string $block_content, array $block): string {
+	if ($block_content === '') {
+		return $block_content;
+	}
+
+	$name = (string) ( $block['blockName'] ?? '' );
+	if ($name !== 'core/embed' && $name !== 'core-embed/youtube') {
+		return $block_content;
+	}
+
+	if (! preg_match('#youtube\.com|youtu\.be|youtube-nocookie\.com#i', $block_content)) {
+		return $block_content;
+	}
+
+	$url = '';
+	if (isset($block['attrs']['url']) && is_string($block['attrs']['url'])) {
+		$url = $block['attrs']['url'];
+	}
+
+	$is_short = tnf_youtube_is_shorts_url($url) || preg_match('#youtube\.com/shorts/#i', $block_content) === 1;
+	$modifier = $is_short ? 'tnf-video-embed--shorts' : 'tnf-video-embed--landscape';
+
+	if (str_contains($block_content, $modifier)) {
+		return $block_content;
+	}
+
+	$replaced = preg_replace(
+		'/<figure(\s+[^>]*class=")([^"]*wp-block-embed[^"]*)(")/',
+		'<figure$1$2 tnf-video-embed ' . $modifier . '$3',
+		$block_content,
+		1
+	);
+
+	return is_string($replaced) && $replaced !== '' ? $replaced : $block_content;
 }
 
 /**
