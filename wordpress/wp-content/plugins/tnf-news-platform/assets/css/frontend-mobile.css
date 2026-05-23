@@ -542,12 +542,12 @@
 		padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 8px);
 	}
 
-	.tnf-capacitor-app .tnf-home-news .tnf-top-utility {
+	.tnf-capacitor-app .tnf-home-news:not(.tnf-chrome-aaj) .tnf-top-utility {
 		display: none !important;
 	}
 
-	.tnf-capacitor-app .tnf-masthead {
-		box-shadow: 0 2px 12px rgba(15, 19, 32, 0.06);
+	.tnf-capacitor-app .tnf-chrome-aaj .tnf-chrome-head {
+		top: env(safe-area-inset-top, 0px);
 	}
 
 	.tnf-capacitor-app .tnf-site-chrome .tnf-breaking {

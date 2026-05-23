@@ -299,46 +299,81 @@ function tnf_mobile_app_render_bottom_nav(): void {
 		return;
 	}
 
-	$home    = esc_url(home_url('/'));
-	$epaper  = esc_url(home_url('/epaper/'));
-	$videos  = esc_url(home_url('/videos/'));
-	$account = function_exists('tnf_auth_page_url')
-		? esc_url(tnf_auth_page_url(is_user_logged_in() ? 'my-account' : 'login'))
-		: esc_url(home_url(is_user_logged_in() ? '/my-account/' : '/login/'));
+	$epaper_url = get_post_type_archive_link('tnf_pdf_report');
+	$epaper_url = is_string($epaper_url) && $epaper_url !== '' ? $epaper_url : home_url('/pdf-reports/');
+	$videos_url = get_post_type_archive_link('tnf_video');
+	$videos_url = is_string($videos_url) && $videos_url !== '' ? $videos_url : home_url('/videos/');
+
+	$home_raw    = home_url('/');
+	$epaper_raw  = $epaper_url;
+	$videos_raw  = $videos_url;
+	$account_raw = function_exists('tnf_auth_page_url')
+		? tnf_auth_page_url(is_user_logged_in() ? 'my-account' : 'login')
+		: home_url(is_user_logged_in() ? '/my-account/' : '/login/');
+
+	$home    = esc_url(tnf_mobile_app_preserve_query($home_raw));
+	$epaper  = esc_url(tnf_mobile_app_preserve_query($epaper_raw));
+	$videos  = esc_url(tnf_mobile_app_preserve_query($videos_raw));
+	$account = esc_url(tnf_mobile_app_preserve_query($account_raw));
 
 	$active = 'home';
-	if (is_page('epaper') || is_singular('tnf_pdf_report')) {
+	if (is_page('epaper') || is_singular('tnf_pdf_report') || is_post_type_archive('tnf_pdf_report')) {
 		$active = 'epaper';
-	} elseif (is_page('videos') || is_singular('tnf_video')) {
+	} elseif (is_page('videos') || is_singular('tnf_video') || is_post_type_archive('tnf_video')) {
 		$active = 'videos';
 	} elseif (is_page('my-account') || tnf_is_auth_page()) {
 		$active = 'account';
 	}
 
+	$account_label = __('Sign In', 'tnf-news-platform');
+	if (is_user_logged_in()) {
+		$user = wp_get_current_user();
+		$name = function_exists('tnf_admin_user_greeting_name')
+			? tnf_admin_user_greeting_name($user)
+			: ($user->display_name ?: $user->user_login);
+		$account_label = $name !== '' ? $name : __('Account', 'tnf-news-platform');
+	}
+
+	$icon = static function (string $name): string {
+		return function_exists('tnf_chrome_icon_svg') ? tnf_chrome_icon_svg($name) : '';
+	};
+
 	?>
 	<nav class="tnf-app-bottom-nav" aria-label="<?php esc_attr_e('App navigation', 'tnf-news-platform'); ?>">
 		<a class="tnf-app-bottom-nav__item<?php echo $active === 'home' ? ' is-active' : ''; ?>" href="<?php echo $home; ?>" data-tnf-nav="home">
-			<span class="tnf-app-bottom-nav__icon" aria-hidden="true">⌂</span>
+			<span class="tnf-app-bottom-nav__icon" aria-hidden="true"><?php echo $icon('home'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 			<span class="tnf-app-bottom-nav__label"><?php esc_html_e('Home', 'tnf-news-platform'); ?></span>
 		</a>
 		<a class="tnf-app-bottom-nav__item<?php echo $active === 'epaper' ? ' is-active' : ''; ?>" href="<?php echo $epaper; ?>" data-tnf-nav="epaper">
-			<span class="tnf-app-bottom-nav__icon" aria-hidden="true">▤</span>
+			<span class="tnf-app-bottom-nav__icon" aria-hidden="true"><?php echo $icon('epaper'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 			<span class="tnf-app-bottom-nav__label"><?php esc_html_e('ePaper', 'tnf-news-platform'); ?></span>
 		</a>
 		<a class="tnf-app-bottom-nav__item<?php echo $active === 'videos' ? ' is-active' : ''; ?>" href="<?php echo $videos; ?>" data-tnf-nav="videos">
-			<span class="tnf-app-bottom-nav__icon" aria-hidden="true">▶</span>
+			<span class="tnf-app-bottom-nav__icon" aria-hidden="true"><?php echo $icon('video'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 			<span class="tnf-app-bottom-nav__label"><?php esc_html_e('Videos', 'tnf-news-platform'); ?></span>
 		</a>
 		<button type="button" class="tnf-app-bottom-nav__item" data-tnf-app-menu="1" aria-label="<?php esc_attr_e('Open menu', 'tnf-news-platform'); ?>">
-			<span class="tnf-app-bottom-nav__icon" aria-hidden="true">☰</span>
+			<span class="tnf-app-bottom-nav__icon" aria-hidden="true"><?php echo $icon('menu'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
 			<span class="tnf-app-bottom-nav__label"><?php esc_html_e('Menu', 'tnf-news-platform'); ?></span>
 		</button>
-		<a class="tnf-app-bottom-nav__item<?php echo $active === 'account' ? ' is-active' : ''; ?>" href="<?php echo $account; ?>" data-tnf-nav="account">
-			<span class="tnf-app-bottom-nav__icon" aria-hidden="true">●</span>
-			<span class="tnf-app-bottom-nav__label"><?php esc_html_e('Account', 'tnf-news-platform'); ?></span>
+		<a class="tnf-app-bottom-nav__item<?php echo $active === 'account' ? ' is-active' : ''; ?><?php echo is_user_logged_in() ? ' is-signed-in' : ''; ?>" href="<?php echo $account; ?>" data-tnf-nav="account">
+			<span class="tnf-app-bottom-nav__icon" aria-hidden="true"><?php echo $icon('account'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+			<span class="tnf-app-bottom-nav__label"><?php echo esc_html($account_label); ?></span>
 		</a>
 	</nav>
 	<?php
+}
+
+/**
+ * Keep ?tnf_app=1 on internal app links during browser QA.
+ *
+ * @param string $url Target URL.
+ */
+function tnf_mobile_app_preserve_query(string $url): string {
+	if (! tnf_mobile_app_preview_cookie_active() && ! isset($_GET['tnf_app'])) {
+		return $url;
+	}
+	return add_query_arg('tnf_app', '1', $url);
 }
 
 /**

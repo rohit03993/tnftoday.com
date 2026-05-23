@@ -7,7 +7,7 @@
 	-webkit-tap-highlight-color: transparent;
 }
 
-.tnf-capacitor-app .tnf-top-utility {
+.tnf-capacitor-app:not(:has(.tnf-chrome-aaj)) .tnf-top-utility {
 	display: none !important;
 }
 
@@ -33,15 +33,23 @@
 	min-height: 44px;
 }
 
-.tnf-capacitor-app .tnf-site-chrome .tnf-top-nav .tnf-nav-toggle {
+.tnf-capacitor-app .tnf-site-chrome .tnf-top-nav .tnf-nav-toggle,
+.tnf-capacitor-app .tnf-chrome-head__menu-btn {
 	min-width: 44px;
 	min-height: 44px;
 }
 
-.tnf-capacitor-app .tnf-site-chrome .tnf-main-menu a {
+.tnf-capacitor-app .tnf-chrome-aaj #tnf-chrome-drawer {
+	z-index: 600;
+}
+
+.tnf-capacitor-app .tnf-chrome-aaj .tnf-chrome-drawer-backdrop {
+	z-index: 590;
+}
+
+.tnf-capacitor-app .tnf-chrome-aaj .tnf-drawer-nav > .tnf-main-menu__link,
+.tnf-capacitor-app .tnf-chrome-aaj .tnf-drawer-nav > a {
 	min-height: 44px;
-	padding-top: 12px;
-	padding-bottom: 12px;
 }
 
 .tnf-capacitor-app .tnf-auth-nav-btn {
@@ -53,6 +61,15 @@
 .tnf-capacitor-app body,
 .tnf-capacitor-app {
 	--tnf-app-nav-height: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+body.tnf-capacitor-app {
+	padding-bottom: var(--tnf-app-nav-height);
+}
+
+/* App uses its own tab bar — not the mobile-web chrome bar */
+.tnf-capacitor-app .tnf-chrome-bottom-nav {
+	display: none !important;
 }
 
 .tnf-capacitor-app .tnf-footer-bar,
@@ -119,12 +136,36 @@
 }
 
 .tnf-app-bottom-nav__icon {
-	font-size: 18px;
-	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 22px;
+	line-height: 0;
+}
+
+.tnf-app-bottom-nav__icon svg {
+	display: block;
+	width: 22px;
+	height: 22px;
 }
 
 .tnf-app-bottom-nav__label {
 	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.tnf-app-bottom-nav__item.is-signed-in .tnf-app-bottom-nav__label {
+	font-size: 9px;
+}
+
+.tnf-capacitor-app .tnf-chrome-head__tools .tnf-chrome-tool--signin {
+	max-width: 42vw;
+}
+
+.tnf-capacitor-app .tnf-chrome-tool__signin-label {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;

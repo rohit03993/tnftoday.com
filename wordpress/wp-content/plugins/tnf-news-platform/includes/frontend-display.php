@@ -18,6 +18,7 @@ add_filter('render_block', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 
 add_filter('render_block_core/post-featured-image', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_filter('render_block', 'tnf_render_block_hide_duplicate_video_embed', 10, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
+add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_header_aajtak_styles', 40);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
 /**
  * Enqueue header/footer chrome CSS (templates using shortcodes or shared classes).
@@ -49,6 +50,32 @@ function tnf_enqueue_frontend_chrome_styles(): void {
 			true
 		);
 	}
+}
+
+/**
+ * Aaj Tak header CSS — after theme home-news so layout wins over legacy nav rules.
+ */
+function tnf_enqueue_frontend_header_aajtak_styles(): void {
+	if (is_admin()) {
+		return;
+	}
+
+	$aaj_path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-header-aajtak.css';
+	if (! is_readable($aaj_path)) {
+		return;
+	}
+
+	$deps = array('tnf-frontend-chrome');
+	if (wp_style_is('tnf-child-home-news', 'registered') || wp_style_is('tnf-child-home-news', 'enqueued')) {
+		$deps[] = 'tnf-child-home-news';
+	}
+
+	wp_enqueue_style(
+		'tnf-frontend-header-aajtak',
+		TNF_NEWS_PLATFORM_URL . 'assets/css/frontend-header-aajtak.css',
+		$deps,
+		(string) filemtime($aaj_path)
+	);
 }
 
 /**
@@ -175,6 +202,203 @@ function tnf_render_main_menu_link(array $item): void {
 	echo '<a class="tnf-main-menu__link' . esc_attr($active) . '" href="' . esc_url($item['url']) . '">';
 	echo '<span class="tnf-main-menu__label">' . esc_html($item['label']) . '</span>';
 	echo '</a>';
+}
+
+/**
+ * Primary items in the navy bar (Aaj Tak–style top row).
+ *
+ * @return array<int, array{label:string, url:string}>
+ */
+function tnf_header_primary_nav_items(): array {
+	$epaper_url = get_post_type_archive_link('tnf_pdf_report');
+	$epaper_url = is_string($epaper_url) && $epaper_url !== '' ? $epaper_url : home_url('/pdf-reports/');
+
+	$link = static function (string $slug): array {
+		$cats = array(
+			'national'      => __('National', 'tnf-news-platform'),
+			'entertainment' => __('Entertainment', 'tnf-news-platform'),
+			'religion'      => __('Religion', 'tnf-news-platform'),
+			'lifestyle'     => __('Lifestyle', 'tnf-news-platform'),
+			'sports'        => __('Sports', 'tnf-news-platform'),
+		);
+
+		return array(
+			'label' => $cats[ $slug ],
+			'url'   => tnf_news_category_link($slug),
+		);
+	};
+
+	return array(
+		array(
+			'label' => __('Home', 'tnf-news-platform'),
+			'url'   => home_url('/'),
+		),
+		array(
+			'label' => __('ePaper', 'tnf-news-platform'),
+			'url'   => $epaper_url,
+		),
+		$link('national'),
+		$link('entertainment'),
+		$link('religion'),
+		$link('lifestyle'),
+		$link('sports'),
+	);
+}
+
+/**
+ * Horizontal topic pills under the breaking bar (categories + hot tags).
+ *
+ * @return array<int, array{label:string, url:string}>
+ */
+function tnf_header_topic_pill_items(): array {
+	$pills = array();
+	$tags = get_tags(
+		array(
+			'orderby' => 'count',
+			'order'   => 'DESC',
+			'number'  => 6,
+			'hide_empty' => true,
+		)
+	);
+	if (is_array($tags)) {
+		foreach ($tags as $tag) {
+			if (! $tag instanceof WP_Term) {
+				continue;
+			}
+			$link = get_tag_link($tag);
+			if (is_wp_error($link)) {
+				continue;
+			}
+			$pills[] = array(
+				'label' => $tag->name,
+				'url'   => $link,
+			);
+			if (count($pills) >= 14) {
+				break;
+			}
+		}
+	}
+
+	$seen = array();
+	$unique = array();
+	foreach ($pills as $pill) {
+		$key = strtolower($pill['url']);
+		if (isset($seen[ $key ])) {
+			continue;
+		}
+		$seen[ $key ] = true;
+		$unique[]     = $pill;
+	}
+
+	return array_slice($unique, 0, 14);
+}
+
+/**
+ * Inline SVG for chrome icon buttons.
+ *
+ * @param string $name epaper|search|live|menu|home|video|account.
+ */
+function tnf_chrome_icon_svg(string $name): string {
+	$icons = array(
+		'epaper'  => '<svg class="tnf-chrome-tool__epaper-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 2h9l5 5v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5L16 3.5zM7 7h10v1.5H7V7zm0 4h10v1.5H7V11zm0 4h7v1.5H7V15z"/></svg>',
+		'search'  => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>',
+		'live'    => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+		'menu'    => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/></svg>',
+		'home'    => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>',
+		'video'   => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
+		'account' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
+	);
+
+	return $icons[ $name ] ?? '';
+}
+
+/**
+ * Logo block for chrome head (custom logo, unified banner, or text).
+ */
+function tnf_render_chrome_logo(string $home_url, string $home_aria, bool $has_unified, int $banner_aid, string $banner_link): void {
+	// Aaj Tak chrome bar always uses the compact custom logo (not the wide unified banner).
+	$logo_img   = tnf_chrome_logo_image_html();
+	if ($logo_img === '') {
+		$logo_img = tnf_masthead_custom_logo_image_html();
+	}
+	$site_title = trim((string) get_bloginfo('name', 'display'));
+	?>
+	<a class="tnf-chrome-head__logo tnf-logo-home" href="<?php echo esc_url($home_url); ?>" rel="home" aria-label="<?php echo esc_attr($home_aria); ?>">
+		<?php if ($logo_img !== '') : ?>
+			<span class="tnf-logo-image"><?php echo $logo_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+		<?php elseif ($site_title !== '') : ?>
+			<span class="tnf-brand"><?php echo esc_html($site_title); ?></span>
+		<?php endif; ?>
+	</a>
+	<?php
+}
+
+/**
+ * Side navigation drawer (mobile + desktop hamburger).
+ */
+function tnf_render_chrome_menu_drawer(): void {
+	$home_url   = tnf_masthead_home_url();
+	$epaper_url = get_post_type_archive_link('tnf_pdf_report');
+	$epaper_url = is_string($epaper_url) && $epaper_url !== '' ? $epaper_url : home_url('/pdf-reports/');
+	$logo_html  = tnf_chrome_logo_image_html();
+	$home_aria  = sprintf(
+		/* translators: %s: site name */
+		__('Go to %s homepage', 'tnf-news-platform'),
+		get_bloginfo('name', 'display')
+	);
+	?>
+	<aside
+		id="tnf-chrome-drawer"
+		class="tnf-chrome-side-drawer"
+		aria-hidden="true"
+		aria-label="<?php esc_attr_e('Site sections', 'tnf-news-platform'); ?>"
+	>
+		<div class="tnf-drawer-head">
+			<a class="tnf-drawer-head__logo" href="<?php echo esc_url($home_url); ?>" aria-label="<?php echo esc_attr($home_aria); ?>">
+				<?php if ($logo_html !== '') : ?>
+					<span class="tnf-drawer-head__logo-img"><?php echo $logo_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+				<?php else : ?>
+					<span class="tnf-drawer-head__site"><?php echo esc_html(get_bloginfo('name', 'display')); ?></span>
+				<?php endif; ?>
+			</a>
+			<a class="tnf-drawer-head__epaper" href="<?php echo esc_url($epaper_url); ?>"><?php esc_html_e('e-Paper', 'tnf-news-platform'); ?></a>
+			<button
+				type="button"
+				class="tnf-drawer-close"
+				data-tnf-drawer-close
+				aria-label="<?php esc_attr_e('Close menu', 'tnf-news-platform'); ?>"
+			>
+				<span aria-hidden="true">×</span>
+			</button>
+		</div>
+		<nav class="tnf-drawer-body tnf-drawer-nav" aria-label="<?php esc_attr_e('Sections', 'tnf-news-platform'); ?>">
+			<?php
+			foreach (tnf_news_nav_items() as $item) {
+				tnf_render_main_menu_link($item);
+			}
+			if (function_exists('tnf_mobile_app_active') && tnf_mobile_app_active()) {
+				$login_url   = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/login/');
+				$account_url = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/');
+				if (is_user_logged_in()) {
+					tnf_render_main_menu_link(
+						array(
+							'label' => __('My Account', 'tnf-news-platform'),
+							'url'   => $account_url,
+						)
+					);
+				} else {
+					tnf_render_main_menu_link(
+						array(
+							'label' => __('Sign In', 'tnf-news-platform'),
+							'url'   => $login_url,
+						)
+					);
+				}
+			}
+			?>
+		</nav>
+	</aside>
+	<?php
 }
 
 /**
@@ -439,6 +663,32 @@ function tnf_masthead_home_url(): string {
 }
 
 /**
+ * Compact logo markup for the Aaj Tak chrome bar (sized for nav height).
+ */
+function tnf_chrome_logo_image_html(): string {
+	if (! function_exists('has_custom_logo') || ! has_custom_logo()) {
+		return '';
+	}
+	$logo_id = (int) get_theme_mod('custom_logo');
+	if ($logo_id <= 0) {
+		return '';
+	}
+	$html = wp_get_attachment_image(
+		$logo_id,
+		array( 160, 160 ),
+		false,
+		array(
+			'class'    => 'custom-logo tnf-chrome-logo-img',
+			'loading'  => 'eager',
+			'decoding' => 'async',
+			'alt'      => get_bloginfo('name', 'display'),
+		)
+	);
+
+	return is_string($html) ? $html : '';
+}
+
+/**
  * Custom logo image markup for masthead (no nested home link).
  */
 function tnf_masthead_custom_logo_image_html(): string {
@@ -475,21 +725,28 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 	}
 	$rendered = true;
 
-	$login_url    = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/login/');
-	$register_url = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('register') : home_url('/register/');
-	$account_url  = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/');
+	$login_url   = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/login/');
+	$account_url = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/');
 	$epaper_url   = get_post_type_archive_link('tnf_pdf_report');
 	$epaper_url   = is_string($epaper_url) && $epaper_url !== '' ? $epaper_url : home_url('/pdf-reports/');
-	$root_class   = $wrap_root_typography ? 'tnf-site-chrome tnf-home-news' : 'tnf-site-chrome';
+	$root_class   = $wrap_root_typography ? 'tnf-site-chrome tnf-home-news tnf-chrome-aaj' : 'tnf-site-chrome tnf-chrome-aaj';
 	$ticker_inner = tnf_news_breaking_ticker_inner_html();
+	$videos_url   = get_post_type_archive_link('tnf_video');
+	$videos_url   = is_string($videos_url) && $videos_url !== '' ? $videos_url : home_url('/videos/');
+	$whatsapp_url = apply_filters('tnf_chrome_whatsapp_url', '');
+	$whatsapp_url = is_string($whatsapp_url) ? esc_url($whatsapp_url) : '';
+	$topic_pills  = tnf_header_topic_pill_items();
 
 	$header_settings = function_exists('tnf_header_get_settings') ? tnf_header_get_settings() : array();
 	$banner_aid      = absint($header_settings['banner_attachment_id'] ?? 0);
 	$banner_link     = is_string($header_settings['banner_link_url'] ?? null) ? (string) $header_settings['banner_link_url'] : '';
 	$banner_src          = $banner_aid ? wp_get_attachment_image_url($banner_aid, 'large') : '';
 	$has_unified_masthead = is_string($banner_src) && $banner_src !== '';
-	$masthead_inner_class = 'tnf-shell tnf-masthead-inner' . ( $has_unified_masthead ? ' tnf-masthead-inner--unified' : '' );
 	$home_url             = tnf_masthead_home_url();
+	$news_url             = get_post_type_archive_link('tnf_news');
+	$news_url             = is_string($news_url) && $news_url !== '' ? $news_url : home_url('/news/');
+	$account_href         = is_user_logged_in() ? $account_url : $login_url;
+	$account_label        = is_user_logged_in() ? __('My Account', 'tnf-news-platform') : __('Sign In', 'tnf-news-platform');
 	$home_aria            = sprintf(
 		/* translators: %s: site name */
 		__('Go to %s homepage', 'tnf-news-platform'),
@@ -497,146 +754,134 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 	);
 	?>
 	<div class="<?php echo esc_attr($root_class); ?>">
-		<header class="tnf-masthead">
-			<div class="<?php echo esc_attr($masthead_inner_class); ?>">
-				<?php if ($has_unified_masthead) : ?>
-					<?php
-					$unified_img = wp_get_attachment_image(
-						$banner_aid,
-						'full',
-						false,
-						array(
-							'class'   => 'tnf-masthead-unified__img',
-							'loading' => 'eager',
-							'alt'     => '',
-						)
-					);
-					?>
-					<?php
-					$unified_href = $banner_link !== '' ? $banner_link : $home_url;
-					$unified_rel  = $banner_link !== '' ? '' : 'home';
-					?>
-					<div class="tnf-masthead-unified">
-						<a
-							class="tnf-masthead-unified__link tnf-logo-home"
-							href="<?php echo esc_url($unified_href); ?>"
-							<?php if ($unified_rel !== '') : ?>
-								rel="<?php echo esc_attr($unified_rel); ?>"
-							<?php endif; ?>
-							aria-label="<?php echo esc_attr($home_aria); ?>"
-						>
-							<?php echo $unified_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-						</a>
-					</div>
-				<?php else : ?>
-					<?php
-					$logo_img   = tnf_masthead_custom_logo_image_html();
-					$site_title = trim((string) get_bloginfo('name', 'display'));
-					$tagline    = trim((string) get_bloginfo('description', 'display'));
-					if ($tagline === '' && function_exists('get_theme_mod')) {
-						// Backward compatibility: keep existing custom tagline only when WP tagline is empty.
-						$tagline = trim((string) get_theme_mod('tnf_masthead_tagline', ''));
-					}
-					?>
-					<a class="tnf-logo-home" href="<?php echo esc_url($home_url); ?>" rel="home" aria-label="<?php echo esc_attr($home_aria); ?>">
-						<?php if ($logo_img !== '') : ?>
-							<span class="tnf-logo-image"><?php echo $logo_img; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-						<?php elseif ($site_title !== '') : ?>
-							<span class="tnf-brand"><?php echo esc_html($site_title); ?></span>
-						<?php endif; ?>
-						<?php if ($tagline !== '' && $logo_img === '') : ?>
-							<span class="tnf-meta"><?php echo esc_html($tagline); ?></span>
-						<?php endif; ?>
-					</a>
-				<?php endif; ?>
-				<div class="tnf-account-wrap">
-					<?php if (is_user_logged_in()) : ?>
-						<a class="tnf-auth-nav-btn" href="<?php echo esc_url($account_url); ?>"><?php esc_html_e('My Account', 'tnf-news-platform'); ?></a>
-					<?php else : ?>
-						<a class="tnf-auth-nav-btn" href="<?php echo esc_url($login_url); ?>"><?php esc_html_e('Login', 'tnf-news-platform'); ?></a>
-						<a class="tnf-auth-nav-btn tnf-auth-nav-btn--secondary" href="<?php echo esc_url($register_url); ?>"><?php esc_html_e('Register', 'tnf-news-platform'); ?></a>
-					<?php endif; ?>
+		<div class="tnf-chrome-stack">
+		<div class="tnf-top-nav tnf-chrome-head">
+			<div class="tnf-shell tnf-chrome-head__inner">
+				<div class="tnf-chrome-head__lead">
+					<button
+						type="button"
+						class="tnf-nav-toggle tnf-chrome-head__menu-btn"
+						aria-expanded="false"
+						aria-controls="tnf-chrome-drawer"
+						aria-label="<?php esc_attr_e('Toggle sections menu', 'tnf-news-platform'); ?>"
+					>
+						<?php echo tnf_chrome_icon_svg('menu'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+					</button>
+					<?php tnf_render_chrome_logo($home_url, $home_aria, $has_unified_masthead, $banner_aid, $banner_link); ?>
 				</div>
-			</div>
-		</header>
 
-		<div class="tnf-top-nav">
-			<div class="tnf-shell">
-				<div class="tnf-top-nav__actions">
-				<a class="tnf-nav-quicklink" href="<?php echo esc_url($epaper_url); ?>">
-					<span class="tnf-nav-quicklink__icon" aria-hidden="true">
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" focusable="false"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
-					</span>
-					<span class="tnf-nav-quicklink__text"><?php esc_html_e('ePaper', 'tnf-news-platform'); ?></span>
-				</a>
-				<button
-					type="button"
-					class="tnf-nav-toggle"
-					aria-expanded="false"
-					aria-controls="tnf-main-menu"
-					aria-label="<?php esc_attr_e('Toggle sections menu', 'tnf-news-platform'); ?>"
-				>
-					<span class="tnf-nav-toggle__icon" aria-hidden="true"></span>
-					<span class="tnf-nav-toggle__text"><?php esc_html_e('Menu', 'tnf-news-platform'); ?></span>
-				</button>
-				</div>
 				<nav id="tnf-main-menu" class="tnf-main-menu" aria-label="<?php esc_attr_e('Sections', 'tnf-news-platform'); ?>">
 					<div class="tnf-main-menu__bar" role="menubar"><?php
-					foreach (tnf_news_nav_items() as $item) {
+					foreach (tnf_header_primary_nav_items() as $item) {
 						tnf_render_main_menu_link($item);
 					}
-					?></div>
-					<div class="tnf-main-menu__drawer">
-					<?php foreach (tnf_news_nav_sections() as $section) : ?>
-						<?php
-						$accent = isset($section['accent']) && is_string($section['accent']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $section['accent'])
-							? $section['accent']
-							: '#c41e3a';
-						$sec_id = isset($section['id']) && is_string($section['id']) ? $section['id'] : 'sec';
-						$label_id = 'tnf-nav-sec-' . preg_replace('/[^a-z0-9_-]+/i', '', $sec_id);
-						?>
-						<div
-							class="tnf-main-menu__section"
-							role="group"
-							data-section="<?php echo esc_attr($sec_id); ?>"
-							aria-labelledby="<?php echo esc_attr($label_id); ?>"
-							style="<?php echo esc_attr('--tnf-section-accent:' . $accent . ';'); ?>"
+					?>
+						<button
+							type="button"
+							class="tnf-main-menu__link tnf-main-menu__more"
+							aria-expanded="false"
+							aria-controls="tnf-chrome-drawer"
+							data-tnf-nav-more
 						>
-							<div class="tnf-main-menu__section-head">
-								<span class="tnf-main-menu__section-dot" aria-hidden="true"></span>
-								<p class="tnf-main-menu__section-title" id="<?php echo esc_attr($label_id); ?>"><?php echo esc_html($section['title']); ?></p>
-							</div>
-							<div class="tnf-main-menu__section-links"><?php
-								foreach ($section['items'] as $item) {
-									tnf_render_main_menu_link($item);
-								}
-								?></div>
-						</div>
-					<?php endforeach; ?>
+							<span class="tnf-main-menu__label"><?php esc_html_e('More', 'tnf-news-platform'); ?></span>
+						</button>
 					</div>
 				</nav>
+
+				<div class="tnf-chrome-head__tools">
+					<a class="tnf-chrome-tool tnf-chrome-tool--epaper" href="<?php echo esc_url($epaper_url); ?>" aria-label="<?php esc_attr_e('e-Paper', 'tnf-news-platform'); ?>">
+						<span class="tnf-chrome-tool__epaper-icon" aria-hidden="true">
+							<?php echo tnf_chrome_icon_svg('epaper'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						</span>
+						<span class="tnf-chrome-tool__epaper-label"><?php esc_html_e('e-Paper', 'tnf-news-platform'); ?></span>
+					</a>
+					<a class="tnf-chrome-tool tnf-chrome-tool--signin" href="<?php echo esc_url($account_href); ?>" aria-label="<?php echo esc_attr($account_label); ?>">
+						<?php echo tnf_chrome_icon_svg('account'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+						<span class="tnf-chrome-tool__signin-label"><?php echo esc_html($account_label); ?></span>
+					</a>
+				</div>
 			</div>
 		</div>
 
 		<?php if ($ticker_inner !== '') : ?>
 			<div class="tnf-breaking" role="region" aria-label="<?php esc_attr_e('Breaking news ticker', 'tnf-news-platform'); ?>">
-				<div class="tnf-shell tnf-breaking-inner">
-					<div class="tnf-breaking-badge">
-						<span class="tnf-breaking-badge__dot" aria-hidden="true"></span>
-						<span class="tnf-breaking-badge__text"><?php esc_html_e('Live Breaking', 'tnf-news-platform'); ?></span>
-					</div>
-					<div class="tnf-breaking-viewport">
-						<div class="tnf-breaking-marquee">
-							<div class="tnf-breaking-marquee__strip">
-								<?php echo $ticker_inner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-							</div>
-							<div class="tnf-breaking-marquee__strip" aria-hidden="true">
-								<?php echo $ticker_inner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<div class="tnf-shell">
+					<div class="tnf-breaking-inner">
+						<div class="tnf-breaking-badge">
+							<span class="tnf-breaking-badge__text"><?php esc_html_e('Breaking News', 'tnf-news-platform'); ?></span>
+						</div>
+						<div class="tnf-breaking-viewport">
+							<div class="tnf-breaking-marquee">
+								<div class="tnf-breaking-marquee__strip">
+									<?php echo $ticker_inner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+								</div>
+								<div class="tnf-breaking-marquee__strip" aria-hidden="true">
+									<?php echo $ticker_inner; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+								</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
+		<?php endif; ?>
+		</div><!-- .tnf-chrome-stack -->
+
+		<button
+			type="button"
+			class="tnf-chrome-drawer-backdrop"
+			data-tnf-drawer-backdrop
+			aria-label="<?php esc_attr_e('Close menu', 'tnf-news-platform'); ?>"
+			hidden
+		></button>
+		<?php tnf_render_chrome_menu_drawer(); ?>
+
+		<?php if ($whatsapp_url !== '') : ?>
+			<a class="tnf-chrome-whatsapp" href="<?php echo esc_url($whatsapp_url); ?>" target="_blank" rel="noopener noreferrer">
+				<span class="tnf-chrome-whatsapp__icon" aria-hidden="true">WA</span>
+				<span class="tnf-chrome-whatsapp__text"><?php esc_html_e('Join our WhatsApp channel', 'tnf-news-platform'); ?></span>
+			</a>
+		<?php endif; ?>
+
+		<?php if ($topic_pills !== array()) : ?>
+			<div class="tnf-chrome-topics" role="navigation" aria-label="<?php esc_attr_e('Trending topics', 'tnf-news-platform'); ?>">
+				<div class="tnf-shell tnf-chrome-topics__inner">
+					<button type="button" class="tnf-chrome-topics__scroll tnf-chrome-topics__scroll--prev" data-tnf-topics-scroll="prev" aria-label="<?php esc_attr_e('Scroll topics left', 'tnf-news-platform'); ?>">‹</button>
+					<div class="tnf-chrome-topics__viewport">
+						<div class="tnf-chrome-topics__track" data-tnf-topics-track>
+							<?php foreach ($topic_pills as $pill) : ?>
+								<a class="tnf-chrome-topics__pill" href="<?php echo esc_url($pill['url']); ?>"><?php echo esc_html($pill['label']); ?></a>
+							<?php endforeach; ?>
+						</div>
+					</div>
+					<button type="button" class="tnf-chrome-topics__scroll tnf-chrome-topics__scroll--next" data-tnf-topics-scroll="next" aria-label="<?php esc_attr_e('Scroll topics right', 'tnf-news-platform'); ?>">›</button>
+				</div>
+			</div>
+		<?php endif; ?>
+
+		<?php if (! function_exists('tnf_mobile_app_active') || ! tnf_mobile_app_active()) : ?>
+		<nav class="tnf-chrome-bottom-nav" aria-label="<?php esc_attr_e('Mobile navigation', 'tnf-news-platform'); ?>">
+			<a class="tnf-chrome-bottom-nav__item<?php echo is_front_page() ? ' is-active' : ''; ?>" href="<?php echo esc_url($home_url); ?>">
+				<?php echo tnf_chrome_icon_svg('home'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<span><?php esc_html_e('Home', 'tnf-news-platform'); ?></span>
+			</a>
+			<a class="tnf-chrome-bottom-nav__item<?php echo tnf_news_nav_url_is_current($videos_url) ? ' is-active' : ''; ?>" href="<?php echo esc_url($videos_url); ?>">
+				<?php echo tnf_chrome_icon_svg('video'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<span><?php esc_html_e('Videos', 'tnf-news-platform'); ?></span>
+			</a>
+			<a class="tnf-chrome-bottom-nav__item tnf-chrome-bottom-nav__item--live" href="<?php echo esc_url($videos_url); ?>">
+				<span class="tnf-chrome-bottom-nav__live-dot" aria-hidden="true"></span>
+				<?php echo tnf_chrome_icon_svg('live'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<span><?php esc_html_e('Live TV', 'tnf-news-platform'); ?></span>
+			</a>
+			<a class="tnf-chrome-bottom-nav__item<?php echo tnf_news_nav_url_is_current($news_url) ? ' is-active' : ''; ?>" href="<?php echo esc_url($news_url); ?>">
+				<?php echo tnf_chrome_icon_svg('epaper'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<span><?php esc_html_e('News', 'tnf-news-platform'); ?></span>
+			</a>
+			<button type="button" class="tnf-chrome-bottom-nav__item tnf-chrome-bottom-nav__menu" data-tnf-bottom-menu aria-label="<?php esc_attr_e('Open menu', 'tnf-news-platform'); ?>">
+				<?php echo tnf_chrome_icon_svg('menu'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<span><?php esc_html_e('Menu', 'tnf-news-platform'); ?></span>
+			</button>
+		</nav>
 		<?php endif; ?>
 	</div>
 	<?php
