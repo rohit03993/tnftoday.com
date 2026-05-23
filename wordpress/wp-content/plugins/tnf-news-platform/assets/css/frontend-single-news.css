@@ -43,18 +43,23 @@
 	padding-bottom: 56.25%;
 }
 
-/* YouTube Shorts — explicit box sized from viewport (no padding-bottom hack) */
+/* YouTube Shorts — width-first (narrow boxes clip the YT player on the right) */
 .tnf-video-embed--shorts,
 .tnf-video-embed[data-tnf-shorts='1'],
 figure.tnf-video-embed--shorts {
-	--tnf-shorts-max-h: min(calc(100dvh - 200px), calc(100svh - 200px), 520px);
-	--tnf-shorts-w: min(100%, calc(var(--tnf-shorts-max-h) * 9 / 16), 400px);
+	--tnf-shorts-w: min(100%, 400px);
+	--tnf-shorts-h: min(
+		calc(var(--tnf-shorts-w) * 16 / 9),
+		calc(100dvh - 180px),
+		calc(100svh - 180px),
+		720px
+	);
 	display: flex;
 	justify-content: center;
 	width: 100%;
 	max-width: 100%;
 	margin-inline: auto;
-	overflow: hidden;
+	overflow: visible;
 	box-sizing: border-box;
 }
 
@@ -63,9 +68,9 @@ figure.tnf-video-embed--shorts {
 figure.tnf-video-embed--shorts .wp-block-embed__wrapper {
 	position: relative;
 	width: var(--tnf-shorts-w) !important;
-	height: var(--tnf-shorts-max-h) !important;
+	height: var(--tnf-shorts-h) !important;
 	max-width: 100% !important;
-	max-height: var(--tnf-shorts-max-h) !important;
+	max-height: var(--tnf-shorts-h) !important;
 	padding: 0 !important;
 	padding-bottom: 0 !important;
 	margin-inline: auto;
