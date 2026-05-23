@@ -15,12 +15,15 @@ if (! defined('ABSPATH')) {
 function tnf_register_mobile_performance(): void {
 	add_action('wp_enqueue_scripts', 'tnf_perf_dequeue_bloat', 100);
 	add_action('wp_enqueue_scripts', 'tnf_perf_tune_scripts', 110);
+	add_action('wp_enqueue_scripts', 'tnf_perf_tune_styles', 110);
 	add_filter('script_loader_tag', 'tnf_perf_defer_script_tag', 10, 2);
+	add_filter('style_loader_tag', 'tnf_perf_async_style_tag', 10, 2);
 	add_filter('wp_get_attachment_image_attributes', 'tnf_perf_attachment_image_attrs', 10, 3);
 	add_filter('the_content', 'tnf_perf_lazy_content_images', 20);
 	add_action('wp_head', 'tnf_perf_resource_hints', 0);
 	add_filter('body_class', 'tnf_perf_body_class');
 	add_action('wp_enqueue_scripts', 'tnf_enqueue_mobile_perf_styles', 42);
+	add_action('save_post', 'tnf_perf_flush_breaking_ticker_cache', 20);
 }
 
 /**
@@ -52,13 +55,32 @@ function tnf_perf_resource_hints(): void {
 	if (is_singular('tnf_pdf_report')) {
 		echo '<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />' . "\n";
 	}
+
+	if (is_singular('tnf_video') || is_page('videos') || is_post_type_archive('tnf_video')) {
+		echo '<link rel="dns-prefetch" href="https://www.youtube-nocookie.com" />' . "\n";
+		echo '<link rel="dns-prefetch" href="https://i.ytimg.com" />' . "\n";
+	}
 }
 
 /**
  * Remove low-value core assets on mobile front-end.
  */
 function tnf_perf_dequeue_bloat(): void {
-	if (is_admin() || ! tnf_is_lightweight_client()) {
+	if (is_admin()) {
+		return;
+	}
+
+	if (tnf_perf_should_dequeue_block_library()) {
+		wp_dequeue_style('wp-block-library');
+		wp_dequeue_style('wp-block-library-theme');
+		wp_dequeue_style('classic-theme-styles');
+	}
+
+	if (! is_user_logged_in()) {
+		wp_dequeue_style('dashicons');
+	}
+
+	if (! tnf_is_lightweight_client()) {
 		return;
 	}
 
@@ -119,6 +141,87 @@ function tnf_perf_tune_scripts(): void {
 	if (! is_front_page() && ! is_home()) {
 		wp_dequeue_script('tnf-child-home-news');
 	}
+}
+
+/**
+ * Drop heavy CSS on routes that do not need it (mobile + app).
+ */
+function tnf_perf_tune_styles(): void {
+	if (is_admin() || ! tnf_is_lightweight_client()) {
+		return;
+	}
+
+	if (! is_front_page() && ! is_home()) {
+		wp_dequeue_script('tnf-child-home-news');
+	}
+}
+
+/**
+ * TNF singles/archives use plugin CSS; block library is ~100KB+ extra on mobile.
+ */
+function tnf_perf_should_dequeue_block_library(): bool {
+	if (is_admin()) {
+		return false;
+	}
+
+	if (
+		is_singular(array( 'tnf_news', 'tnf_video', 'tnf_pdf_report' ))
+		|| is_post_type_archive(array( 'tnf_news', 'tnf_video', 'tnf_pdf_report' ))
+		|| is_category()
+		|| is_tag()
+	) {
+		return true;
+	}
+
+	return (bool) apply_filters('tnf_perf_dequeue_block_library', false);
+}
+
+/**
+ * Non-blocking Google Fonts + defer home bundle off homepage (header CSS loads first).
+ *
+ * @param string $tag    Link tag.
+ * @param string $handle Handle.
+ */
+function tnf_perf_async_style_tag(string $tag, string $handle): string {
+	$async_handles = array('tnf-devanagari-fonts');
+	if (tnf_is_lightweight_client() && ! is_front_page() && ! is_home()) {
+		$async_handles[] = 'tnf-child-home-news';
+	}
+
+	if (! in_array($handle, $async_handles, true)) {
+		return $tag;
+	}
+
+	if (str_contains($tag, 'media=')) {
+		return (string) preg_replace(
+			'/media=(["\'])all\1/',
+			'media=$1print$1 onload="this.media=\'all\'"',
+			$tag,
+			1
+		);
+	}
+
+	return str_replace(
+		"rel='stylesheet'",
+		"rel='stylesheet' media='print' onload=\"this.media='all'\"",
+		$tag
+	);
+}
+
+/**
+ * @param int $post_id Post ID.
+ */
+function tnf_perf_flush_breaking_ticker_cache(int $post_id): void {
+	if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+		return;
+	}
+
+	$type = get_post_type($post_id);
+	if (! is_string($type) || ! in_array($type, tnf_listing_news_post_types(), true)) {
+		return;
+	}
+
+	delete_transient('tnf_breaking_ticker_html');
 }
 
 /**

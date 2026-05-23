@@ -29,7 +29,7 @@
 	var APP_QS = (cfg.appQuery || 'tnf_app=1').replace(/^\?/, '');
 	var loaderHideTimer = null;
 	var loaderShownAt = 0;
-	var LOADER_MIN_MS = 380;
+	var LOADER_MIN_MS = 120;
 
 	function getLoaderEl() {
 		return document.getElementById('tnf-app-page-loader');
@@ -564,7 +564,9 @@
 	}
 
 	document.addEventListener('DOMContentLoaded', function () {
-		initPageLoader();
+		if (getLoaderEl()) {
+			initPageLoader();
+		}
 
 		var hasAppShell =
 			cfg.isApp ||
@@ -581,13 +583,10 @@
 		initBottomNav();
 		initPullToRefresh();
 		initLazyImages();
-		patchInternalLinks();
 
 		runWhenIdle(function () {
 			patchInternalLinks();
 			initPushNotifications();
-		}, 4000);
-
-		document.addEventListener('DOMContentLoaded', patchInternalLinks);
+		}, 2500);
 	});
 })();

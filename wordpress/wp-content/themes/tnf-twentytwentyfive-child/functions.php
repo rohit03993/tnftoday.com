@@ -108,8 +108,15 @@ function tnf_child_header_customizer_css(): void {
 	if ($h < 24 || $h > 200) {
 		$h = 64;
 	}
+	$style_handle = 'tnf-child-style';
+	if (wp_style_is('tnf-child-home-news', 'enqueued')) {
+		$style_handle = 'tnf-child-home-news';
+	} elseif (wp_style_is('tnf-frontend-header-aajtak', 'enqueued')) {
+		$style_handle = 'tnf-frontend-header-aajtak';
+	}
+
 	wp_add_inline_style(
-		'tnf-child-home-news',
+		$style_handle,
 		'.tnf-site-chrome.tnf-home-news,.tnf-chrome-aaj{--tnf-chrome-logo-h:' . $h . 'px;--tnf-logo-max-height:' . $h . 'px;}'
 	);
 }
@@ -124,7 +131,7 @@ function tnf_child_enqueue_fonts(): void {
 	}
 	wp_enqueue_style(
 		'tnf-devanagari-fonts',
-		'https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Noto+Sans:wght@400;600;700&display=swap',
+		'https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans:wght@400;600;700&display=swap',
 		array(),
 		null
 	);

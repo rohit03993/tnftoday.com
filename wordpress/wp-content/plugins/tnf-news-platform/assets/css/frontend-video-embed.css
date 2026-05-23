@@ -4,6 +4,11 @@
  */
 
 /* ----- Video single: stop WordPress alignfull viewport breakout ----- */
+body.single-tnf_video {
+	overflow-x: clip;
+	max-width: 100%;
+}
+
 .single-tnf_video .tnf-single-tnf-video,
 .single-tnf_video main.tnf-single-tnf-video {
 	max-width: 100%;

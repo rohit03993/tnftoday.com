@@ -432,6 +432,12 @@ function tnf_news_breaking_ticker_inner_html(): string {
 	}
 	$count = max(4, min(24, $count));
 
+	$cache_key = 'tnf_breaking_ticker_html';
+	$cached    = get_transient($cache_key);
+	if (is_string($cached) && $cached !== '') {
+		return $cached;
+	}
+
 	$breaking = new WP_Query(
 		array(
 			'post_type'      => tnf_listing_news_post_types(),
@@ -2192,7 +2198,7 @@ function tnf_enqueue_video_embed_assets(): void {
 		return;
 	}
 
-	$deps = array('tnf-single-news', 'wp-block-library');
+	$deps = array('tnf-single-news');
 	foreach (array('tnf-frontend-mobile', 'tnf-mobile-app', 'tnf-child-home-news', 'tnf-frontend-chrome') as $handle) {
 		if (wp_style_is($handle, 'registered') || wp_style_is($handle, 'enqueued')) {
 			$deps[] = $handle;

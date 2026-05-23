@@ -99,6 +99,10 @@ function tnf_enqueue_frontend_mobile_styles(): void {
 		return;
 	}
 
+	if (! wp_is_mobile() && ! tnf_mobile_app_active()) {
+		return;
+	}
+
 	$path = TNF_NEWS_PLATFORM_PATH . 'assets/css/frontend-mobile.css';
 	if (! is_readable($path)) {
 		return;
