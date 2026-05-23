@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+
+# Android build outputs (keep android/ project source tracked after cap add)
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.aab
+*.keystore
+!android/app/src/main/res/**/ic_launcher*

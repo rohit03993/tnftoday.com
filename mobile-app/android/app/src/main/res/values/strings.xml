@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TNF Today</string>
+    <string name="title_activity_main">TNF Today</string>
+    <string name="package_name">com.tnftoday.app</string>
+    <string name="custom_url_scheme">com.tnftoday.app</string>
+</resources>

@@ -30,6 +30,14 @@ After each batch: `git push` → VPS `git pull` → test on phone (browser or ap
 2. App preview: `https://tnftoday.com/?tnf_app=1`
 3. APK after Android Studio run.
 
+## App-native experience (Capacitor)
+
+| Item | File |
+|------|------|
+| App UI (home, article, login, My Account dashboard) | `frontend-app-experience.css` |
+| Blocks wp-admin in app | `mobile-app.php` |
+| Not WordPress admin — member **My Account** only | same |
+
 ## Next iterations
 
-Reply with specific pages that still look wrong (screenshot or URL). We tune that section in `frontend-mobile.css` without an APK rebuild.
+Reply with specific pages that still look wrong (screenshot or URL). We tune that section without an APK rebuild.
