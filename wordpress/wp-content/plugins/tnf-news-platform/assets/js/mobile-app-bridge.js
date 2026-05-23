@@ -473,6 +473,88 @@
 		}
 	}
 
+	/**
+	 * YouTube Shorts must stay 9:16. Capping height without shrinking width
+	 * (e.g. 370×460) makes YT crop left/right. Scale the whole player to fit.
+	 */
+	function initShortsPlayerFit() {
+		var roots = document.querySelectorAll(
+			'.tnf-video-embed--shorts, .tnf-video-embed[data-tnf-shorts="1"], figure.tnf-video-embed--shorts'
+		);
+		if (!roots.length) {
+			return;
+		}
+
+		var padX = 16;
+		var padY = 12;
+		var chromeTop = 0;
+		var chromeBottom = 0;
+		var stack = document.querySelector('.tnf-chrome-stack');
+		if (stack) {
+			chromeTop += stack.getBoundingClientRect().height;
+		}
+		var appNav = document.querySelector('.tnf-app-bottom-nav');
+		var webNav = document.querySelector('.tnf-chrome-bottom-nav');
+		if (appNav) {
+			chromeBottom += appNav.getBoundingClientRect().height;
+		} else if (webNav) {
+			chromeBottom += webNav.getBoundingClientRect().height;
+		}
+
+		var maxW = Math.min(window.innerWidth - padX * 2, 400);
+		var maxH = Math.max(240, window.innerHeight - chromeTop - chromeBottom - padY * 2);
+
+		roots.forEach(function (root) {
+			var host = root.classList.contains('tnf-video-embed') ? root : root.closest('.tnf-video-embed');
+			if (!host) {
+				host = root;
+			}
+			var box = root.querySelector('.wp-block-embed__wrapper');
+			if (!box) {
+				return;
+			}
+
+			host.classList.add('tnf-shorts-fit-host');
+			box.classList.add('tnf-shorts-fit-box');
+
+			var w = maxW;
+			var h = (w * 16) / 9;
+			var scale = 1;
+			if (h > maxH) {
+				scale = maxH / h;
+			}
+
+			box.style.width = w + 'px';
+			box.style.height = h + 'px';
+			box.style.maxWidth = '100%';
+			box.style.marginLeft = 'auto';
+			box.style.marginRight = 'auto';
+
+			if (scale < 1) {
+				box.style.transform = 'scale(' + scale + ')';
+				box.style.transformOrigin = 'top center';
+				host.style.height = Math.ceil(h * scale) + 'px';
+			} else {
+				box.style.transform = '';
+				host.style.height = '';
+			}
+
+			host.style.display = 'flex';
+			host.style.justifyContent = 'center';
+			host.style.width = '100%';
+			host.style.maxWidth = '100%';
+			host.style.overflow = 'visible';
+		});
+	}
+
+	var shortsFitTimer = null;
+	function scheduleShortsPlayerFit() {
+		if (shortsFitTimer) {
+			window.clearTimeout(shortsFitTimer);
+		}
+		shortsFitTimer = window.setTimeout(initShortsPlayerFit, 80);
+	}
+
 	function initPullToRefresh() {
 		if (!cfg.pullRefresh) {
 			return;
@@ -566,6 +648,19 @@
 	document.addEventListener('DOMContentLoaded', function () {
 		initPageLoader();
 
+		var hasShorts = !!document.querySelector(
+			'.tnf-video-embed--shorts, .tnf-video-embed[data-tnf-shorts="1"], figure.tnf-video-embed--shorts'
+		);
+		if (hasShorts) {
+			initShortsPlayerFit();
+			window.addEventListener('resize', scheduleShortsPlayerFit);
+			window.addEventListener('orientationchange', scheduleShortsPlayerFit);
+			window.addEventListener('pageshow', scheduleShortsPlayerFit);
+			window.addEventListener('load', scheduleShortsPlayerFit);
+			window.setTimeout(initShortsPlayerFit, 400);
+			window.setTimeout(initShortsPlayerFit, 1200);
+		}
+
 		var hasAppShell =
 			cfg.isApp ||
 			document.body.classList.contains('tnf-capacitor-app') ||
@@ -586,6 +681,9 @@
 		runWhenIdle(function () {
 			patchInternalLinks();
 			initPushNotifications();
+			if (hasShorts) {
+				scheduleShortsPlayerFit();
+			}
 		}, 4000);
 
 		document.addEventListener('DOMContentLoaded', patchInternalLinks);
