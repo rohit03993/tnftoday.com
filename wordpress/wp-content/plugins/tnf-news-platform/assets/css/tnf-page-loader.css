@@ -8,7 +8,7 @@
 	--tnf-loader-track: rgba(188, 30, 56, 0.12);
 	position: fixed;
 	inset: 0;
-	z-index: 100090;
+	z-index: 100120;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -18,6 +18,8 @@
 
 .tnf-app-page-loader[hidden] {
 	display: none !important;
+	pointer-events: none !important;
+	visibility: hidden;
 }
 
 html.tnf-app-nav-pending .tnf-app-page-loader {

@@ -173,7 +173,8 @@ function tnf_mobile_app_viewport_meta(): void {
  * Whether the logo page loader runs (default on for local QA; filter to disable in production).
  */
 function tnf_page_navigation_loader_enabled(): bool {
-	return (bool) apply_filters('tnf_page_navigation_loader_enabled', true);
+	$default = tnf_mobile_app_active() || (is_admin() && current_user_can('edit_posts'));
+	return (bool) apply_filters('tnf_page_navigation_loader_enabled', $default);
 }
 
 /**

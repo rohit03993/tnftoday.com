@@ -11,8 +11,12 @@
 	display: none !important;
 }
 
+.tnf-capacitor-app .tnf-site-chrome {
+	padding-top: env(safe-area-inset-top, 0px);
+}
+
 .tnf-capacitor-app .tnf-masthead {
-	padding-top: max(8px, env(safe-area-inset-top));
+	padding-top: 10px !important;
 }
 
 .tnf-capacitor-app .tnf-site-chrome .tnf-top-nav .tnf-nav-toggle {
@@ -52,7 +56,7 @@
 	left: 0;
 	right: 0;
 	bottom: 0;
-	z-index: 100050;
+	z-index: 100110;
 	display: grid;
 	grid-template-columns: repeat(5, 1fr);
 	align-items: stretch;
@@ -63,9 +67,13 @@
 	box-shadow: 0 -6px 24px rgba(15, 19, 32, 0.08);
 	backdrop-filter: blur(12px);
 	font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+	touch-action: manipulation;
+	pointer-events: auto;
 }
 
 .tnf-app-bottom-nav__item {
+	position: relative;
+	z-index: 1;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -82,6 +90,9 @@
 	cursor: pointer;
 	-webkit-user-select: none;
 	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
+	pointer-events: auto;
 	transition: color 0.15s ease, transform 0.1s ease;
 }
 

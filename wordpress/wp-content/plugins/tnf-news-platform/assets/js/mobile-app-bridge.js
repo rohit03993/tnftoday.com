@@ -123,11 +123,18 @@
 		}
 	}
 
+	function isBottomNavLink(anchor) {
+		return !!(anchor && anchor.closest && anchor.closest('.tnf-app-bottom-nav'));
+	}
+
 	function shouldShowLoaderForLink(anchor, href) {
 		if (!href || href.indexOf('mailto:') === 0 || href.indexOf('tel:') === 0) {
 			return false;
 		}
 		if (href.charAt(0) === '#') {
+			return false;
+		}
+		if (isBottomNavLink(anchor)) {
 			return false;
 		}
 		if (anchor.hasAttribute('data-tnf-open-browser')) {
@@ -158,9 +165,7 @@
 		}
 
 		window.addEventListener('pageshow', function () {
-			if (document.readyState === 'complete') {
-				hidePageLoader();
-			}
+			hidePageLoader();
 		});
 
 		window.addEventListener('load', function () {
@@ -410,28 +415,61 @@
 		checkNetwork(true);
 	}
 
+	function navigateBottomNav(href) {
+		if (!href) {
+			return;
+		}
+		var target = cfg.isApp ? ensureAppQueryOnUrl(href) : href;
+		try {
+			var next = new URL(target, window.location.href);
+			if (isSamePageNavigation(next.href)) {
+				return;
+			}
+		} catch (e) {
+			return;
+		}
+		hapticLight();
+		markNavStarted();
+		window.location.assign(target);
+	}
+
 	function initBottomNav() {
 		document.querySelectorAll('.tnf-app-bottom-nav__item[data-tnf-nav]').forEach(function (item) {
-			item.addEventListener('click', function (e) {
-				var href = item.getAttribute('href');
-				if (href && shouldShowLoaderForLink(item, href)) {
-					hapticLight();
-					markNavStarted();
-				} else {
-					hapticLight();
-				}
-			});
+			item.addEventListener(
+				'click',
+				function (e) {
+					var href = item.getAttribute('href');
+					if (!href) {
+						return;
+					}
+					if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+						return;
+					}
+					e.preventDefault();
+					e.stopPropagation();
+					navigateBottomNav(href);
+				},
+				false
+			);
 		});
 
 		var menuBtn = document.querySelector('[data-tnf-app-menu]');
 		if (menuBtn) {
-			menuBtn.addEventListener('click', function () {
-				hapticLight();
-				var toggle = document.querySelector('.tnf-nav-toggle');
-				if (toggle) {
-					toggle.click();
-				}
-			});
+			menuBtn.addEventListener(
+				'click',
+				function (e) {
+					e.preventDefault();
+					e.stopPropagation();
+					hapticLight();
+					var topNav = document.querySelector('.tnf-site-chrome .tnf-top-nav');
+					var toggle = topNav ? topNav.querySelector('.tnf-nav-toggle') : document.querySelector('.tnf-nav-toggle');
+					if (toggle) {
+						toggle.click();
+						window.scrollTo({ top: 0, behavior: 'smooth' });
+					}
+				},
+				false
+			);
 		}
 	}
 
@@ -528,7 +566,12 @@
 	document.addEventListener('DOMContentLoaded', function () {
 		initPageLoader();
 
-		if (!cfg.isApp && !document.body.classList.contains('tnf-capacitor-app')) {
+		var hasAppShell =
+			cfg.isApp ||
+			document.body.classList.contains('tnf-capacitor-app') ||
+			!!document.querySelector('.tnf-app-bottom-nav');
+
+		if (!hasAppShell) {
 			return;
 		}
 
