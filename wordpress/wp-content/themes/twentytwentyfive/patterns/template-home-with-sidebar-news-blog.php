@@ -162,55 +162,55 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 ?>
 <div class="tnf-home-news">
 	<div class="tnf-shell">
+		<section class="tnf-card tnf-hero-section tnf-hero-section--lead">
+			<div class="tnf-hero-grid">
+				<div class="tnf-hero-main">
+					<?php
+					$hero = new WP_Query(
+						array(
+							'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
+							'post_status'    => 'publish',
+							'posts_per_page' => 1,
+						)
+					);
+					if ( $hero->have_posts() ) :
+						$hero->the_post();
+						?>
+						<a class="tnf-hero-image" href="<?php the_permalink(); ?>"><img src="<?php echo esc_url( twentytwentyfive_tnf_news_thumbnail_url( (int) get_the_ID() ) ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" loading="lazy" /></a>
+						<h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
+						<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>"><?php echo esc_html( get_the_date() ); ?></time>
+						<?php
+						wp_reset_postdata();
+					endif;
+					?>
+				</div>
+				<div class="tnf-hero-side">
+					<h3><?php esc_html_e( 'Latest Headlines', 'twentytwentyfive' ); ?></h3>
+					<?php
+					$latest = new WP_Query(
+						array(
+							'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
+							'post_status'    => 'publish',
+							'posts_per_page' => 8,
+							'offset'         => 1,
+						)
+					);
+					if ( $latest->have_posts() ) :
+						echo '<ul>';
+						while ( $latest->have_posts() ) :
+							$latest->the_post();
+							echo '<li><a class="tnf-list-thumb" href="' . esc_url( get_permalink() ) . '"><img src="' . esc_url( twentytwentyfive_tnf_news_thumbnail_url( (int) get_the_ID() ) ) . '" alt="' . esc_attr( get_the_title() ) . '" loading="lazy" /><span>' . esc_html( get_the_title() ) . '</span></a></li>';
+						endwhile;
+						echo '</ul>';
+						wp_reset_postdata();
+					endif;
+					?>
+				</div>
+			</div>
+		</section>
+
 		<div class="tnf-layout">
 			<main class="tnf-main-col">
-				<section class="tnf-card tnf-hero-section">
-					<div class="tnf-hero-grid">
-						<div class="tnf-hero-main">
-							<?php
-							$hero = new WP_Query(
-								array(
-									'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-									'post_status'    => 'publish',
-									'posts_per_page' => 1,
-								)
-							);
-							if ( $hero->have_posts() ) :
-								$hero->the_post();
-								?>
-								<a class="tnf-hero-image" href="<?php the_permalink(); ?>"><img src="<?php echo esc_url( twentytwentyfive_tnf_news_thumbnail_url( (int) get_the_ID() ) ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" loading="lazy" /></a>
-								<h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
-								<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>"><?php echo esc_html( get_the_date() ); ?></time>
-								<?php
-								wp_reset_postdata();
-							endif;
-							?>
-						</div>
-						<div class="tnf-hero-side">
-							<h3><?php esc_html_e( 'Latest Headlines', 'twentytwentyfive' ); ?></h3>
-							<?php
-							$latest = new WP_Query(
-								array(
-									'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-									'post_status'    => 'publish',
-									'posts_per_page' => 8,
-									'offset'         => 1,
-								)
-							);
-							if ( $latest->have_posts() ) :
-								echo '<ul>';
-								while ( $latest->have_posts() ) :
-									$latest->the_post();
-									echo '<li><a class="tnf-list-thumb" href="' . esc_url( get_permalink() ) . '"><img src="' . esc_url( twentytwentyfive_tnf_news_thumbnail_url( (int) get_the_ID() ) ) . '" alt="' . esc_attr( get_the_title() ) . '" loading="lazy" /><span>' . esc_html( get_the_title() ) . '</span></a></li>';
-								endwhile;
-								echo '</ul>';
-								wp_reset_postdata();
-							endif;
-							?>
-						</div>
-					</div>
-				</section>
-
 				<?php
 				if ( function_exists( 'tnf_render_home_featured_videos_rail' ) ) {
 					tnf_render_home_featured_videos_rail( 10 );
