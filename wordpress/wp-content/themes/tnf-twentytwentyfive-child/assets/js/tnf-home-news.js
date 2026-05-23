@@ -9,6 +9,7 @@
 		'.tnf-home-news .tnf-hero-side ul, ' +
 		'.tnf-home-news .tnf-cat-grid, ' +
 		'.tnf-home-news .tnf-recent-grid, ' +
+		'.tnf-home-news .tnf-video-rail, ' +
 		'.tnf-home-news .tnf-video-grid, ' +
 		'.tnf-home-news .tnf-side-widget ul';
 

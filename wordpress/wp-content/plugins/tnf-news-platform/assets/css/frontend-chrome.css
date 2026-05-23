@@ -13,6 +13,28 @@
 	color: #111;
 }
 
+/* Homepage: no extra gap above site chrome from block theme wrappers */
+body.home .wp-site-blocks,
+body.home-page .wp-site-blocks,
+body.front-page .wp-site-blocks {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+}
+
+body.home .wp-block-template-part:has(.tnf-site-chrome),
+body.home-page .wp-block-template-part:has(.tnf-site-chrome),
+body.front-page .wp-block-template-part:has(.tnf-site-chrome) {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+}
+
+body.home .wp-site-blocks > main,
+body.home-page .wp-site-blocks > main,
+body.front-page .wp-site-blocks > main {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+}
+
 /* Second header block (Site Editor duplicate template part or cached HTML): hide extras. */
 .tnf-site-chrome.tnf-home-news ~ .tnf-site-chrome.tnf-home-news {
 	display: none !important;

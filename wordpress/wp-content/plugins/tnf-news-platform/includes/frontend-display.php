@@ -1142,6 +1142,91 @@ function tnf_youtube_id_from_url(string $url): string {
 }
 
 /**
+ * True when a video should use portrait (Shorts) card layout on the homepage.
+ */
+function tnf_video_card_is_shorts(int $post_id): bool {
+	if ($post_id <= 0) {
+		return false;
+	}
+
+	$embed = (string) get_post_meta($post_id, 'tnf_embed_url', true);
+	if ($embed !== '' && tnf_youtube_is_shorts_url($embed)) {
+		return true;
+	}
+
+	$content = (string) get_post_field('post_content', $post_id);
+	if ($content !== '' && preg_match('#https?://[^\s"\'<>]+#i', $content, $m)) {
+		return tnf_youtube_is_shorts_url($m[0]);
+	}
+
+	return (bool) apply_filters('tnf_video_card_is_shorts', false, $post_id);
+}
+
+/**
+ * Homepage Featured Videos — horizontal scroll rail (Shorts + landscape cards).
+ *
+ * @param int $count Max videos.
+ */
+function tnf_render_home_featured_videos_rail(int $count = 10): void {
+	$count = max(1, min(20, $count));
+
+	$videos = new WP_Query(
+		array(
+			'post_type'      => 'tnf_video',
+			'post_status'    => 'publish',
+			'posts_per_page' => $count,
+			'no_found_rows'  => true,
+		)
+	);
+
+	if (! $videos->have_posts()) {
+		return;
+	}
+
+	$more_videos = get_post_type_archive_link('tnf_video');
+	$more_videos = is_string($more_videos) && $more_videos !== '' ? $more_videos : home_url('/videos/');
+	?>
+	<section class="tnf-card tnf-featured-videos">
+		<div class="tnf-cat-head">
+			<h3><?php esc_html_e('Featured Videos', 'tnf-news-platform'); ?></h3>
+			<a href="<?php echo esc_url($more_videos); ?>"><?php esc_html_e('See all videos', 'tnf-news-platform'); ?></a>
+		</div>
+		<div class="tnf-video-rail" data-tnf-video-rail tabindex="0" role="region" aria-label="<?php esc_attr_e('Featured videos', 'tnf-news-platform'); ?>">
+			<?php
+			while ($videos->have_posts()) :
+				$videos->the_post();
+				$pid       = (int) get_the_ID();
+				$is_shorts = tnf_video_card_is_shorts($pid);
+				$thumb     = function_exists('tnf_video_card_thumbnail_url')
+					? tnf_video_card_thumbnail_url($pid)
+					: ( function_exists('twentytwentyfive_tnf_video_thumbnail_url')
+						? twentytwentyfive_tnf_video_thumbnail_url($pid)
+						: '' );
+				$card_cls  = 'tnf-video-card' . ( $is_shorts ? ' tnf-video-card--shorts' : ' tnf-video-card--landscape' );
+				?>
+				<article class="<?php echo esc_attr($card_cls); ?>">
+					<a class="tnf-video-card__thumb" href="<?php the_permalink(); ?>">
+						<?php if ($thumb !== '') : ?>
+							<img src="<?php echo esc_url($thumb); ?>" alt="<?php echo esc_attr(get_the_title()); ?>" loading="lazy" decoding="async" />
+						<?php endif; ?>
+						<span class="tnf-video-play" aria-hidden="true"></span>
+						<?php if ($is_shorts) : ?>
+							<span class="tnf-video-card__badge"><?php esc_html_e('Short', 'tnf-news-platform'); ?></span>
+						<?php endif; ?>
+					</a>
+					<h4><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h4>
+					<time datetime="<?php echo esc_attr(get_the_date(DATE_W3C)); ?>"><?php echo esc_html(get_the_date()); ?></time>
+				</article>
+				<?php
+			endwhile;
+			wp_reset_postdata();
+			?>
+		</div>
+	</section>
+	<?php
+}
+
+/**
  * Best thumbnail URL for video cards (featured image, else YouTube poster from embed URL / content).
  */
 function tnf_video_card_thumbnail_url(int $post_id): string {

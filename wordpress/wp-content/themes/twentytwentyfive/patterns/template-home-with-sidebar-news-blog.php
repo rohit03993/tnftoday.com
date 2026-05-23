@@ -211,70 +211,11 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 					</div>
 				</section>
 
-				<section class="tnf-card tnf-featured-videos">
-					<div class="tnf-cat-head">
-						<h3><?php esc_html_e( 'Featured Videos', 'twentytwentyfive' ); ?></h3>
-						<?php
-						$more_videos = get_post_type_archive_link( 'tnf_video' );
-						$more_videos = is_string( $more_videos ) && $more_videos !== '' ? $more_videos : home_url( '/videos/' );
-						?>
-						<a href="<?php echo esc_url( $more_videos ); ?>"><?php esc_html_e( 'See all videos', 'twentytwentyfive' ); ?></a>
-					</div>
-					<div class="tnf-video-layout">
-						<div class="tnf-video-hero">
-							<?php
-							$video_hero = new WP_Query(
-								array(
-									'post_type'      => 'tnf_video',
-									'post_status'    => 'publish',
-									'posts_per_page' => 1,
-								)
-							);
-							if ( $video_hero->have_posts() ) :
-								$video_hero->the_post();
-								$hero_thumb = twentytwentyfive_tnf_video_thumbnail_url( (int) get_the_ID() );
-								?>
-								<a class="tnf-video-hero__thumb" href="<?php the_permalink(); ?>">
-									<img src="<?php echo esc_url( $hero_thumb ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" loading="lazy" />
-									<span class="tnf-video-play"></span>
-								</a>
-								<h4><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h4>
-								<time datetime="<?php echo esc_attr( get_the_date( DATE_W3C ) ); ?>"><?php echo esc_html( get_the_date() ); ?></time>
-								<?php
-								wp_reset_postdata();
-							endif;
-							?>
-						</div>
-						<div class="tnf-video-grid">
-						<?php
-						$videos = new WP_Query(
-							array(
-								'post_type'      => 'tnf_video',
-								'post_status'    => 'publish',
-								'posts_per_page' => 4,
-								'offset'         => 1,
-							)
-						);
-						if ( $videos->have_posts() ) :
-							while ( $videos->have_posts() ) :
-								$videos->the_post();
-								$video_thumb = twentytwentyfive_tnf_video_thumbnail_url( (int) get_the_ID() );
-								?>
-								<article class="tnf-video-card">
-									<a class="tnf-video-card__thumb" href="<?php the_permalink(); ?>">
-										<img src="<?php echo esc_url( $video_thumb ); ?>" alt="<?php echo esc_attr( get_the_title() ); ?>" loading="lazy" />
-										<span class="tnf-video-play"></span>
-									</a>
-									<h4><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h4>
-								</article>
-								<?php
-							endwhile;
-							wp_reset_postdata();
-						endif;
-						?>
-						</div>
-					</div>
-				</section>
+				<?php
+				if ( function_exists( 'tnf_render_home_featured_videos_rail' ) ) {
+					tnf_render_home_featured_videos_rail( 10 );
+				}
+				?>
 
 				<?php
 				$epaper_url = get_post_type_archive_link( 'tnf_pdf_report' );
