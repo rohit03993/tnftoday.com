@@ -16,6 +16,7 @@ add_filter('the_content', 'tnf_news_content_with_category_rail', 11);
 add_filter('the_content', 'tnf_video_single_append_related', 12);
 add_filter('render_block', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
 add_filter('render_block_core/post-featured-image', 'tnf_render_block_post_featured_image_tnf_cpts', 10, 2);
+add_filter('render_block', 'tnf_render_block_hide_duplicate_video_embed', 10, 2);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_chrome_styles', 12);
 add_action('wp_enqueue_scripts', 'tnf_enqueue_frontend_tnf_cpt_styles', 20);
 /**
@@ -970,21 +971,31 @@ function tnf_prepend_news_embed(string $content): string {
 		return $content;
 	}
 
-	$embed = wp_oembed_get($url, array( 'width' => 1280 ));
-	if (! $embed || ! is_string($embed)) {
+	$embed_html = tnf_render_video_embed_html($url);
+	if ($embed_html === '') {
 		return $content;
 	}
 
-	return '<div class="tnf-news-embed tnf-video-embed wp-block-embed is-type-video">' . $embed . '</div>' . $content;
+	$yt_id = tnf_youtube_id_from_url($url);
+	if ($yt_id !== '') {
+		$content = tnf_strip_youtube_embeds_from_content($content, $yt_id);
+	}
+
+	return '<div class="tnf-news-embed">' . $embed_html . '</div>' . $content;
 }
 
 /**
- * Video single: oEmbed from metabox URL.
+ * Video single: one player from metabox URL (strip duplicate embeds in post body).
  *
  * @param string $content Post content.
  */
 function tnf_prepend_video_embed(string $content): string {
-	if (! is_singular('tnf_video')) {
+	if (! is_singular('tnf_video') || ! in_the_loop() || ! is_main_query()) {
+		return $content;
+	}
+
+	static $prepended = false;
+	if ($prepended) {
 		return $content;
 	}
 
@@ -993,12 +1004,127 @@ function tnf_prepend_video_embed(string $content): string {
 		return $content;
 	}
 
-	$embed = wp_oembed_get($url, array( 'width' => 1280 ));
-	if (! $embed || ! is_string($embed)) {
+	$embed_html = tnf_render_video_embed_html($url);
+	if ($embed_html === '') {
 		return $content;
 	}
 
-	return '<div class="tnf-video-embed wp-block-embed is-type-video">' . $embed . '</div>' . $content;
+	$yt_id = tnf_youtube_id_from_url($url);
+	if ($yt_id !== '') {
+		$content = tnf_strip_youtube_embeds_from_content($content, $yt_id);
+	}
+
+	$prepended = true;
+
+	return $embed_html . $content;
+}
+
+/**
+ * True when URL is a YouTube Shorts link.
+ */
+function tnf_youtube_is_shorts_url(string $url): bool {
+	return $url !== '' && preg_match('#youtube\.com/shorts/|youtube\.com/shorts\?#i', $url) === 1;
+}
+
+/**
+ * Single video player markup (YouTube / Shorts-aware; oEmbed fallback for other hosts).
+ */
+function tnf_render_video_embed_html(string $url): string {
+	$url = trim($url);
+	if ($url === '') {
+		return '';
+	}
+
+	$yt_id = tnf_youtube_id_from_url($url);
+	if ($yt_id !== '') {
+		$is_short = tnf_youtube_is_shorts_url($url);
+		$wrap_cls = 'tnf-video-embed wp-block-embed is-type-video is-provider-youtube'
+			. ( $is_short ? ' tnf-video-embed--shorts' : ' tnf-video-embed--landscape' );
+		$title    = get_the_title() ?: __( 'Video', 'tnf-news-platform' );
+		$src      = 'https://www.youtube-nocookie.com/embed/' . rawurlencode($yt_id)
+			. '?rel=0&modestbranding=1&playsinline=1';
+		$iframe   = sprintf(
+			'<div class="wp-block-embed__wrapper"><iframe src="%1$s" title="%2$s" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>',
+			esc_url($src),
+			esc_attr($title)
+		);
+
+		return '<div class="' . esc_attr($wrap_cls) . '">' . $iframe . '</div>';
+	}
+
+	$embed = wp_oembed_get($url, array( 'width' => 1280 ));
+	if (! $embed || ! is_string($embed)) {
+		return '';
+	}
+
+	return '<div class="tnf-video-embed tnf-video-embed--landscape wp-block-embed is-type-video">' . $embed . '</div>';
+}
+
+/**
+ * Remove duplicate YouTube embeds from post content when the metabox URL is rendered above.
+ *
+ * @param string $content   Post HTML.
+ * @param string $video_id  YouTube id.
+ */
+function tnf_strip_youtube_embeds_from_content(string $content, string $video_id): string {
+	if ($content === '' || $video_id === '') {
+		return $content;
+	}
+
+	$id = preg_quote($video_id, '#' );
+
+	$patterns = array(
+		'#<figure\b[^>]*\bwp-block-embed\b[^>]*>.*?' . $id . '.*?</figure>#is',
+		'#<div\b[^>]*\bwp-block-embed\b[^>]*>.*?' . $id . '.*?</div>\s*</div>#is',
+		'#<div\b[^>]*\bwp-block-embed\b[^>]*>.*?' . $id . '.*?</div>#is',
+		'#<iframe\b[^>]*\b(?:youtube\.com|youtube-nocookie\.com|youtu\.be)[^>]*' . $id . '[^>]*>.*?</iframe>#is',
+		'#<iframe\b[^>]*' . $id . '[^>]*>.*?</iframe>#is',
+		'#<p>\s*https?://(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<]*' . $id . '[^\s<]*\s*</p>#i',
+	);
+
+	foreach ($patterns as $pattern) {
+		$content = preg_replace($pattern, '', $content);
+	}
+
+	return trim($content);
+}
+
+/**
+ * Hide core/embed blocks in the editor content when metabox URL already outputs the player.
+ *
+ * @param string $block_content Block HTML.
+ * @param array  $block         Block.
+ */
+function tnf_render_block_hide_duplicate_video_embed(string $block_content, array $block): string {
+	$name = (string) ( $block['blockName'] ?? '' );
+	if ($name !== 'core/embed' && $name !== 'core-embed/youtube') {
+		return $block_content;
+	}
+
+	if (! is_singular('tnf_video') && ! tnf_is_news_article_singular()) {
+		return $block_content;
+	}
+
+	$post_id = (int) get_the_ID();
+	if ($post_id <= 0) {
+		return $block_content;
+	}
+
+	$url = (string) get_post_meta($post_id, 'tnf_embed_url', true);
+	if ($url === '') {
+		return $block_content;
+	}
+
+	$meta_id = tnf_youtube_id_from_url($url);
+	if ($meta_id === '') {
+		return $block_content;
+	}
+
+	if (str_contains($block_content, $meta_id)) {
+		return '';
+	}
+
+	return $block_content;
 }
 
 /**

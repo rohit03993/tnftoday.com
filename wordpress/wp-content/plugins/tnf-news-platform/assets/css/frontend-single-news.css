@@ -6,7 +6,49 @@
 	margin-bottom: 1.25rem;
 }
 
-.tnf-video-embed iframe {
+.tnf-video-embed .wp-block-embed__wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.tnf-video-embed--landscape .wp-block-embed__wrapper,
+.tnf-video-embed--landscape iframe {
+	width: 100%;
+	max-width: 100%;
+	aspect-ratio: 16 / 9;
+	height: auto;
+	min-height: 200px;
+}
+
+.tnf-video-embed--landscape iframe {
+	display: block;
+	border: 0;
+}
+
+/* YouTube Shorts / vertical video — one portrait player, centred */
+.tnf-video-embed--shorts {
+	max-width: min(100%, 420px);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.tnf-video-embed--shorts .wp-block-embed__wrapper,
+.tnf-video-embed--shorts iframe {
+	width: 100%;
+	max-width: 100%;
+	aspect-ratio: 9 / 16;
+	height: auto;
+	min-height: 0;
+	max-height: min(85vh, 740px);
+}
+
+.tnf-video-embed--shorts iframe {
+	display: block;
+	border: 0;
+}
+
+/* Legacy embeds without modifier */
+.tnf-video-embed:not(.tnf-video-embed--shorts):not(.tnf-video-embed--landscape) iframe {
 	width: 100%;
 	max-width: 100%;
 	aspect-ratio: 16 / 9;
