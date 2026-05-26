@@ -578,6 +578,11 @@ function tnf_rest_submissions_reject(WP_REST_Request $req): WP_REST_Response|WP_
  * @param WP_REST_Request $req Request.
  */
 function tnf_rest_pdf_report_clip_og(WP_REST_Request $req): WP_REST_Response|WP_Error {
+	$limited = function_exists('tnf_security_og_rate_limit_error') ? tnf_security_og_rate_limit_error('clip-og') : null;
+	if ($limited instanceof WP_Error) {
+		return $limited;
+	}
+
 	$post_id = (int) $req['id'];
 	$post     = get_post($post_id);
 	if (! $post || 'tnf_pdf_report' !== $post->post_type || 'publish' !== $post->post_status) {
@@ -618,6 +623,11 @@ function tnf_rest_pdf_report_clip_og(WP_REST_Request $req): WP_REST_Response|WP_
  * @param WP_REST_Request $req Request.
  */
 function tnf_rest_pdf_report_page_og(WP_REST_Request $req): WP_REST_Response|WP_Error {
+	$limited = function_exists('tnf_security_og_rate_limit_error') ? tnf_security_og_rate_limit_error('page-og') : null;
+	if ($limited instanceof WP_Error) {
+		return $limited;
+	}
+
 	$post_id = (int) $req['id'];
 	$post    = get_post($post_id);
 	if (! $post || 'tnf_pdf_report' !== $post->post_type || 'publish' !== $post->post_status) {

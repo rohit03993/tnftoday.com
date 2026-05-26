@@ -425,6 +425,11 @@ function tnf_auth_handle_login(): void {
  * Process register submit.
  */
 function tnf_auth_handle_register(): void {
+	if (function_exists('tnf_allow_public_registration') && ! tnf_allow_public_registration()) {
+		wp_safe_redirect(tnf_auth_status_url('err', 'register_failed'));
+		exit;
+	}
+
 	$username = isset($_POST['tnf_username']) ? sanitize_user((string) wp_unslash($_POST['tnf_username']), true) : '';
 	$email    = isset($_POST['tnf_email']) ? sanitize_email((string) wp_unslash($_POST['tnf_email'])) : '';
 	$pass1    = isset($_POST['tnf_password_1']) ? (string) wp_unslash($_POST['tnf_password_1']) : '';
@@ -636,6 +641,10 @@ function tnf_sc_login_form(): string {
  * Register form shortcode.
  */
 function tnf_sc_register_form(): string {
+	if (function_exists('tnf_allow_public_registration') && ! tnf_allow_public_registration()) {
+		return '<p class="tnf-auth-notice">' . esc_html__('Registration is currently closed.', 'tnf-news-platform') . '</p>';
+	}
+
 	if (is_user_logged_in()) {
 		return tnf_sc_account_box();
 	}

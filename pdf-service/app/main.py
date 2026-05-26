@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import secrets
+
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -21,7 +23,7 @@ app.add_middleware(
 def verify_secret(x_service_secret: str | None = Header(default=None, alias="X-Service-Secret")) -> None:
     if not x_service_secret or not settings.service_secret:
         raise HTTPException(status_code=401, detail="missing service secret")
-    if x_service_secret != settings.service_secret:
+    if not secrets.compare_digest(x_service_secret, settings.service_secret):
         raise HTTPException(status_code=403, detail="invalid service secret")
 
 

@@ -94,6 +94,13 @@ function tnf_admin_flush_dashboard_stats_cache(): void {
  * @param string  $status    Post status.
  */
 function tnf_admin_count_posts(string $post_type, int $author_id = 0, string $status = 'publish'): int {
+	if ($author_id <= 0 && post_type_exists($post_type)) {
+		$counts = wp_count_posts($post_type, 'readable');
+		if (is_object($counts) && isset($counts->{$status})) {
+			return (int) $counts->{$status};
+		}
+	}
+
 	$args = array(
 		'post_type'              => $post_type,
 		'post_status'            => $status,

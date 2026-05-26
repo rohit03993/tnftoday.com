@@ -440,9 +440,12 @@ function tnf_news_breaking_ticker_inner_html(): string {
 
 	$breaking = new WP_Query(
 		array(
-			'post_type'      => tnf_listing_news_post_types(),
-			'post_status'    => 'publish',
-			'posts_per_page' => $count,
+			'post_type'              => tnf_listing_news_post_types(),
+			'post_status'            => 'publish',
+			'posts_per_page'         => $count,
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
 		)
 	);
 
@@ -459,7 +462,10 @@ function tnf_news_breaking_ticker_inner_html(): string {
 		return '';
 	}
 
-	return implode('<span class="tnf-breaking-sep" aria-hidden="true">◆</span>', $parts);
+	$html = implode('<span class="tnf-breaking-sep" aria-hidden="true">◆</span>', $parts);
+	set_transient($cache_key, $html, 5 * MINUTE_IN_SECONDS);
+
+	return $html;
 }
 
 /**
@@ -737,13 +743,17 @@ function tnf_render_site_header_chrome(bool $wrap_root_typography = true): void 
 	$account_url = function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/');
 	$epaper_url   = get_post_type_archive_link('tnf_pdf_report');
 	$epaper_url   = is_string($epaper_url) && $epaper_url !== '' ? $epaper_url : home_url('/pdf-reports/');
+	$auth_lite    = function_exists('tnf_is_auth_page') && tnf_is_auth_page();
 	$root_class   = $wrap_root_typography ? 'tnf-site-chrome tnf-home-news tnf-chrome-aaj' : 'tnf-site-chrome tnf-chrome-aaj';
-	$ticker_inner = tnf_news_breaking_ticker_inner_html();
+	if ($auth_lite) {
+		$root_class .= ' tnf-chrome--auth-lite';
+	}
+	$ticker_inner = $auth_lite ? '' : tnf_news_breaking_ticker_inner_html();
 	$videos_url   = get_post_type_archive_link('tnf_video');
 	$videos_url   = is_string($videos_url) && $videos_url !== '' ? $videos_url : home_url('/videos/');
 	$whatsapp_url = apply_filters('tnf_chrome_whatsapp_url', '');
 	$whatsapp_url = is_string($whatsapp_url) ? esc_url($whatsapp_url) : '';
-	$topic_pills  = tnf_header_topic_pill_items();
+	$topic_pills  = $auth_lite ? array() : tnf_header_topic_pill_items();
 
 	$header_settings = function_exists('tnf_header_get_settings') ? tnf_header_get_settings() : array();
 	$banner_aid      = absint($header_settings['banner_attachment_id'] ?? 0);
@@ -1536,10 +1546,12 @@ function tnf_render_home_featured_videos_rail(int $count = 10): void {
 
 	$videos = new WP_Query(
 		array(
-			'post_type'      => 'tnf_video',
-			'post_status'    => 'publish',
-			'posts_per_page' => $count,
-			'no_found_rows'  => true,
+			'post_type'              => 'tnf_video',
+			'post_status'            => 'publish',
+			'posts_per_page'         => $count,
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => true,
+			'update_post_term_cache' => false,
 		)
 	);
 
@@ -1639,7 +1651,7 @@ function tnf_news_post_thumbnail_url(int $post_id): string {
 		return 'https://i.ytimg.com/vi/' . $yt . '/hqdefault.jpg';
 	}
 
-	return 'https://picsum.photos/seed/tnf-news-' . $post_id . '/640/360';
+	return function_exists('tnf_placeholder_image_url') ? tnf_placeholder_image_url() : '';
 }
 
 /**

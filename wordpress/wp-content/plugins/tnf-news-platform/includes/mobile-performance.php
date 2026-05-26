@@ -164,6 +164,10 @@ function tnf_perf_should_dequeue_block_library(): bool {
 		return false;
 	}
 
+	if (is_front_page() || is_home()) {
+		return true;
+	}
+
 	if (
 		is_singular(array( 'tnf_news', 'tnf_video', 'tnf_pdf_report' ))
 		|| is_post_type_archive(array( 'tnf_news', 'tnf_video', 'tnf_pdf_report' ))

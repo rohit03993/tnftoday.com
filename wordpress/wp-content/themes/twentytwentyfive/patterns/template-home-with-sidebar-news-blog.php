@@ -40,10 +40,13 @@ if ( ! function_exists( 'twentytwentyfive_tnf_render_news_cards' ) ) {
 	function twentytwentyfive_tnf_render_news_cards( string $slug, int $count, string $title, string $extra_class = '' ): void {
 		$query = new WP_Query(
 			array(
-				'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-				'post_status'    => 'publish',
-				'posts_per_page' => $count,
-				'category_name'  => $slug,
+				'post_type'              => twentytwentyfive_tnf_news_list_post_types(),
+				'post_status'            => 'publish',
+				'posts_per_page'         => $count,
+				'category_name'          => $slug,
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
 			)
 		);
 		if ( ! $query->have_posts() ) {
@@ -86,9 +89,12 @@ if ( ! function_exists( 'twentytwentyfive_tnf_render_recent_news_grid' ) ) {
 	function twentytwentyfive_tnf_render_recent_news_grid( int $count = 9 ): void {
 		$query = new WP_Query(
 			array(
-				'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-				'post_status'    => 'publish',
-				'posts_per_page' => $count,
+				'post_type'              => twentytwentyfive_tnf_news_list_post_types(),
+				'post_status'            => 'publish',
+				'posts_per_page'         => $count,
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
 			)
 		);
 		if ( ! $query->have_posts() ) {
@@ -133,12 +139,19 @@ if ( ! function_exists( 'twentytwentyfive_tnf_news_thumbnail_url' ) ) {
 	 * @param int $post_id News post ID.
 	 */
 	function twentytwentyfive_tnf_news_thumbnail_url( int $post_id ): string {
+		if ( function_exists( 'tnf_news_post_thumbnail_url' ) ) {
+			$url = tnf_news_post_thumbnail_url( $post_id );
+			if ( is_string( $url ) && $url !== '' ) {
+				return $url;
+			}
+		}
+
 		$thumb = get_the_post_thumbnail_url( $post_id, 'medium_large' );
 		if ( is_string( $thumb ) && $thumb !== '' ) {
 			return $thumb;
 		}
 
-		return 'https://picsum.photos/seed/tnf-news-' . $post_id . '/640/360';
+		return function_exists( 'tnf_placeholder_image_url' ) ? tnf_placeholder_image_url() : '';
 	}
 }
 
@@ -156,7 +169,7 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 			}
 		}
 
-		return 'https://picsum.photos/seed/tnf-video-' . $post_id . '/640/360';
+		return function_exists( 'tnf_placeholder_image_url' ) ? tnf_placeholder_image_url() : '';
 	}
 }
 ?>
@@ -170,9 +183,12 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 							<?php
 							$hero = new WP_Query(
 								array(
-									'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-									'post_status'    => 'publish',
-									'posts_per_page' => 1,
+									'post_type'              => twentytwentyfive_tnf_news_list_post_types(),
+									'post_status'            => 'publish',
+									'posts_per_page'         => 1,
+									'no_found_rows'          => true,
+									'update_post_meta_cache' => true,
+									'update_post_term_cache' => false,
 								)
 							);
 							if ( $hero->have_posts() ) :
@@ -195,10 +211,13 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 							$headline_count = max( 4, min( 6, $headline_count ) );
 							$latest         = new WP_Query(
 								array(
-									'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-									'post_status'    => 'publish',
-									'posts_per_page' => $headline_count,
-									'offset'         => 1,
+									'post_type'              => twentytwentyfive_tnf_news_list_post_types(),
+									'post_status'            => 'publish',
+									'posts_per_page'         => $headline_count,
+									'offset'                 => 1,
+									'no_found_rows'          => true,
+									'update_post_meta_cache' => true,
+									'update_post_term_cache' => false,
 								)
 							);
 							if ( $latest->have_posts() ) :
@@ -269,11 +288,14 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 				<?php
 				$trend = new WP_Query(
 					array(
-						'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-						'post_status'    => 'publish',
-						'posts_per_page' => 8,
-						'orderby'        => 'comment_count',
-						'order'          => 'DESC',
+						'post_type'              => twentytwentyfive_tnf_news_list_post_types(),
+						'post_status'            => 'publish',
+						'posts_per_page'         => 8,
+						'orderby'                => 'comment_count',
+						'order'                  => 'DESC',
+						'no_found_rows'          => true,
+						'update_post_meta_cache' => true,
+						'update_post_term_cache' => false,
 					)
 				);
 				if ( $trend->have_posts() ) :
@@ -295,11 +317,14 @@ if ( ! function_exists( 'twentytwentyfive_tnf_video_thumbnail_url' ) ) {
 
 				$top = new WP_Query(
 					array(
-						'post_type'      => twentytwentyfive_tnf_news_list_post_types(),
-						'post_status'    => 'publish',
-						'posts_per_page' => 6,
-						'orderby'        => 'date',
-						'order'          => 'DESC',
+						'post_type'              => twentytwentyfive_tnf_news_list_post_types(),
+						'post_status'            => 'publish',
+						'posts_per_page'         => 6,
+						'orderby'                => 'date',
+						'order'                  => 'DESC',
+						'no_found_rows'          => true,
+						'update_post_meta_cache' => true,
+						'update_post_term_cache' => false,
 					)
 				);
 				if ( $top->have_posts() ) :

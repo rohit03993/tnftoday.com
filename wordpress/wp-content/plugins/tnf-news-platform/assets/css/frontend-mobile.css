@@ -254,11 +254,41 @@
 	.single-tnf_news .tnf-news-single-main,
 	.single-post .tnf-news-single-main {
 		padding-bottom: 24px;
+		max-width: 100% !important;
+		width: 100% !important;
+		margin-left: 0 !important;
+		margin-right: 0 !important;
+	}
+
+	.single-tnf_news .tnf-news-single-main > .alignfull,
+	.single-post .tnf-news-single-main > .alignfull {
+		max-width: 100% !important;
+		width: 100% !important;
+		padding-left: var(--tnf-m-gutter) !important;
+		padding-right: var(--tnf-m-gutter-r) !important;
+		box-sizing: border-box;
+	}
+
+	.single-tnf_news .tnf-news-single-main .wp-block-post-content,
+	.single-post .tnf-news-single-main .wp-block-post-content {
+		width: 100% !important;
+		max-width: 100% !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
 	}
 
 	.tnf-news-content-layout {
-		padding-left: max(12px, env(safe-area-inset-left));
-		padding-right: max(12px, env(safe-area-inset-right));
+		max-width: 100% !important;
+		width: 100% !important;
+		padding-left: 0 !important;
+		padding-right: 0 !important;
+		margin: 0 !important;
+	}
+
+	.tnf-news-content-body {
+		width: 100%;
+		max-width: 100%;
+		box-sizing: border-box;
 	}
 
 	.tnf-news-meta-head {

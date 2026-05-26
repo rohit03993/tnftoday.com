@@ -360,6 +360,11 @@ function tnf_social_preview_prewarm_on_view(): void {
 		return;
 	}
 
+	// Local XAMPP: skip heavy OG JPEG generation on every page view (uploads often missing).
+	if (defined('TNF_LOCAL_DEV') && TNF_LOCAL_DEV) {
+		return;
+	}
+
 	$post_id = (int) get_queried_object_id();
 	if ($post_id <= 0) {
 		return;
@@ -1284,6 +1289,22 @@ function tnf_social_preview_jpeg_bytes_from_file(string $path) {
 }
 
 /**
+ * Load wp-admin file helpers used on the front end (download_url, wp_tempnam).
+ */
+function tnf_social_preview_load_file_helpers(): bool {
+	if (function_exists('download_url')) {
+		return true;
+	}
+
+	$file = ABSPATH . 'wp-admin/includes/file.php';
+	if (is_readable($file)) {
+		require_once $file;
+	}
+
+	return function_exists('download_url');
+}
+
+/**
  * Download a remote image URL and return JPEG bytes for og:image consumers.
  *
  * @return string|WP_Error
@@ -1308,6 +1329,14 @@ function tnf_social_preview_jpeg_bytes_from_url(string $url) {
 				return tnf_social_preview_jpeg_bytes_from_file($local);
 			}
 		}
+	}
+
+	if (! tnf_social_preview_load_file_helpers()) {
+		return new WP_Error(
+			'download_unavailable',
+			__('Image download helpers unavailable', 'tnf-news-platform'),
+			array('status' => 500)
+		);
 	}
 
 	$tmp = download_url(esc_url_raw($url), 60);
