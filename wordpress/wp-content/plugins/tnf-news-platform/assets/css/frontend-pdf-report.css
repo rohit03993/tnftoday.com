@@ -237,11 +237,11 @@
 }
 
 .tnf-epaper__tool-btn.is-clip {
-	padding: 0 0.55rem;
-	min-width: 2.5rem;
-	color: #7a3e00;
-	border-color: rgba(181, 106, 0, 0.35);
-	background: linear-gradient(180deg, #fff8ed 0%, #ffe8cc 100%);
+	padding: 0 0.72rem;
+	min-width: 4.15rem;
+	color: #374151;
+	border-color: rgba(55, 65, 81, 0.2);
+	background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
 }
 
 .tnf-epaper__tool-btn.is-clip.is-active {
@@ -249,6 +249,16 @@
 	border-color: #9e1830;
 	background: linear-gradient(180deg, #d42036 0%, #8f1128 100%);
 	box-shadow: 0 6px 16px rgba(143, 17, 40, 0.35);
+}
+
+.tnf-epaper__tool-btn.is-clip.is-active .tnf-epaper__tool-text {
+	color: #fff;
+}
+
+.tnf-epaper__tool-btn.is-clip .tnf-epaper__tool-text {
+	color: #374151;
+	font-size: 0.71rem;
+	letter-spacing: 0.02em;
 }
 
 .tnf-epaper__tool-icon {
@@ -539,19 +549,49 @@
 .tnf-epaper__figure.is-clip-mode,
 .tnf-epaper__figure--pdfjs.is-clip-mode {
 	cursor: crosshair;
+	touch-action: none;
+	user-select: none;
+}
+
+.tnf-epaper__figure.is-clip-active::after,
+.tnf-epaper__figure--pdfjs.is-clip-active::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	background: rgba(15, 19, 32, 0.12);
+	pointer-events: none;
 }
 
 .tnf-epaper__clip-box {
 	position: absolute;
-	border: 2px solid #00c853;
-	background: rgba(0, 200, 83, 0.14);
-	box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+	border: 2px solid #ffffff;
+	background: rgba(188, 30, 56, 0.2);
+	box-shadow: 0 0 0 9999px rgba(15, 19, 32, 0.36), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+	border-radius: 10px;
 	pointer-events: none;
+	z-index: 2;
 }
 
 .tnf-epaper__clip-box.is-draft {
-	border-style: dashed;
-	background: rgba(255, 235, 59, 0.18);
+	border-style: solid;
+	background: rgba(188, 30, 56, 0.24);
+}
+
+.tnf-epaper__clip-hint {
+	position: absolute;
+	top: 10px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 3;
+	padding: 8px 12px;
+	border-radius: 999px;
+	background: rgba(17, 20, 28, 0.86);
+	color: #fff;
+	font-size: 0.76rem;
+	font-weight: 700;
+	letter-spacing: 0.01em;
+	white-space: nowrap;
+	pointer-events: none;
 }
 
 .tnf-epaper-clip-only {
@@ -1104,8 +1144,9 @@
 	}
 
 	.tnf-epaper__tool-btn {
-		min-height: 2.25rem;
-		padding: 0 0.55rem;
+		min-height: 2.55rem;
+		padding: 0 0.7rem;
+		border-radius: 12px;
 	}
 
 	.tnf-epaper__tools {
@@ -1117,6 +1158,12 @@
 		padding-top: 0;
 		border-top: 0;
 		gap: 0.3rem;
+	}
+
+	.tnf-epaper__clip-hint {
+		font-size: 0.72rem;
+		padding: 7px 10px;
+		top: 8px;
 	}
 
 	.tnf-epaper-share--toolbar {

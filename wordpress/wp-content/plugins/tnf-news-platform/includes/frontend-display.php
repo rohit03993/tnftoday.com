@@ -981,7 +981,7 @@ function tnf_pdf_report_viewer_pages(int $post_id): array {
  * Inline SVG helpers for ePaper toolbar + social share row (icons for touch targets).
  */
 function tnf_epaper_toolbar_scissors_svg(): string {
-	return '<svg class="tnf-epaper__tool-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm12 0a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>';
+	return '<svg class="tnf-epaper__tool-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M3.5 7.5V3.5h4M20.5 7.5V3.5h-4M3.5 16.5v4h4M20.5 16.5v4h-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="7.2" y="7.2" width="9.6" height="9.6" rx="2.2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
 }
 
 /**
@@ -1006,6 +1006,7 @@ function tnf_epaper_toolbar_tools_html(string $share_url, string $title): string
 	$html  = '<div class="tnf-epaper__tools" role="group" aria-label="' . $tools_lbl . '">';
 	$html .= '<button type="button" class="tnf-epaper__tool-btn is-clip" data-tnf-clip-toggle="1" aria-pressed="false" title="' . $clip_tip . '" aria-label="' . esc_attr__('Cut clip', 'tnf-news-platform') . '">';
 	$html .= '<span class="tnf-epaper__tool-icon" aria-hidden="true">' . tnf_epaper_toolbar_scissors_svg() . '</span>';
+	$html .= '<span class="tnf-epaper__tool-text">' . esc_html__('Crop', 'tnf-news-platform') . '</span>';
 	$html .= '</button>';
 	$html .= '<button type="button" class="tnf-epaper__tool-btn is-copy" data-epaper-copy="' . esc_attr($share_url) . '" title="' . $copy_tip . '" aria-label="' . esc_attr__('Copy page link', 'tnf-news-platform') . '">';
 	$html .= '<span class="tnf-epaper__tool-icon" aria-hidden="true">' . tnf_epaper_toolbar_link_svg() . '</span>';
@@ -2289,6 +2290,7 @@ function tnf_enqueue_frontend_tnf_cpt_styles(): void {
 					'copyLink' => __('Copy link', 'tnf-news-platform'),
 					'linkShort' => __('Link', 'tnf-news-platform'),
 					'clipTool' => __('Cut clip', 'tnf-news-platform'),
+					'clipHint' => __('Drag to select area. Quick tap makes an auto crop.', 'tnf-news-platform'),
 					'shareClip' => __('Share clip', 'tnf-news-platform'),
 					'shareClipHint' => __('Pick a network below, or copy the link to share anywhere.', 'tnf-news-platform'),
 					'openClip' => __('Open clip', 'tnf-news-platform'),

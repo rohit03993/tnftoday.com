@@ -717,6 +717,18 @@
 			var startY = 0;
 			var dragging = false;
 			var draft = null;
+			var minDragPx = 26;
+
+			function ensureClipHint() {
+				var hint = figure.querySelector('.tnf-epaper__clip-hint');
+				if (!hint) {
+					hint = document.createElement('div');
+					hint.className = 'tnf-epaper__clip-hint';
+					hint.textContent = getL10n('clipHint', 'Drag to select area. Quick tap makes an auto crop.');
+					figure.appendChild(hint);
+				}
+				return hint;
+			}
 
 			function pointFromEvent(event) {
 				var source = event.touches && event.touches[0] ? event.touches[0] : event;
@@ -756,8 +768,17 @@
 				var y2 = Math.max(mediaRect.top, Math.min(mediaRect.bottom, Math.max(startY, endY)));
 				var width = x2 - x1;
 				var height = y2 - y1;
-				if (width < 16 || height < 16) {
-					return;
+				if (width < minDragPx || height < minDragPx) {
+					var autoW = mediaRect.width * 0.78;
+					var autoH = mediaRect.height * 0.48;
+					var cX = Math.max(mediaRect.left, Math.min(mediaRect.right, endX));
+					var cY = Math.max(mediaRect.top, Math.min(mediaRect.bottom, endY));
+					x1 = Math.max(mediaRect.left, cX - autoW / 2);
+					y1 = Math.max(mediaRect.top, cY - autoH / 2);
+					x2 = Math.min(mediaRect.right, x1 + autoW);
+					y2 = Math.min(mediaRect.bottom, y1 + autoH);
+					width = x2 - x1;
+					height = y2 - y1;
 				}
 				var clip = {
 					x: (x1 - mediaRect.left) / mediaRect.width,
@@ -785,6 +806,9 @@
 				clipMode = !clipMode;
 				syncClipButton(clipButton, clipMode);
 				figure.classList.toggle('is-clip-mode', clipMode);
+				figure.classList.toggle('is-clip-active', clipMode);
+				var hint = ensureClipHint();
+				hint.hidden = !clipMode;
 			});
 
 			figure.addEventListener('mousedown', function (event) {
@@ -1151,6 +1175,18 @@
 			var startY = 0;
 			var dragging = false;
 			var draft = null;
+			var minDragPx = 26;
+
+			function ensureClipHint() {
+				var hint = figure.querySelector('.tnf-epaper__clip-hint');
+				if (!hint) {
+					hint = document.createElement('div');
+					hint.className = 'tnf-epaper__clip-hint';
+					hint.textContent = getL10n('clipHint', 'Drag to select area. Quick tap makes an auto crop.');
+					figure.appendChild(hint);
+				}
+				return hint;
+			}
 
 			function pointFromEvent(event) {
 				var source = event.touches && event.touches[0] ? event.touches[0] : event;
@@ -1190,8 +1226,17 @@
 				var y2 = Math.max(mediaRect.top, Math.min(mediaRect.bottom, Math.max(startY, endY)));
 				var width = x2 - x1;
 				var height = y2 - y1;
-				if (width < 16 || height < 16) {
-					return;
+				if (width < minDragPx || height < minDragPx) {
+					var autoW = mediaRect.width * 0.78;
+					var autoH = mediaRect.height * 0.48;
+					var cX = Math.max(mediaRect.left, Math.min(mediaRect.right, endX));
+					var cY = Math.max(mediaRect.top, Math.min(mediaRect.bottom, endY));
+					x1 = Math.max(mediaRect.left, cX - autoW / 2);
+					y1 = Math.max(mediaRect.top, cY - autoH / 2);
+					x2 = Math.min(mediaRect.right, x1 + autoW);
+					y2 = Math.min(mediaRect.bottom, y1 + autoH);
+					width = x2 - x1;
+					height = y2 - y1;
 				}
 				var clip = {
 					x: (x1 - mediaRect.left) / mediaRect.width,
@@ -1219,6 +1264,9 @@
 				clipMode = !clipMode;
 				syncClipButton(clipButton, clipMode);
 				figure.classList.toggle('is-clip-mode', clipMode);
+				figure.classList.toggle('is-clip-active', clipMode);
+				var hint = ensureClipHint();
+				hint.hidden = !clipMode;
 			});
 
 			figure.addEventListener('mousedown', function (event) {
