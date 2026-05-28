@@ -65,6 +65,7 @@
 	margin-bottom: 1rem !important;
 	border-radius: 12px;
 	overflow: hidden;
+	background: #eef1f6;
 	box-shadow: 0 4px 24px rgba(15, 15, 25, 0.08);
 }
 
@@ -73,6 +74,20 @@
 	display: block;
 	width: 100%;
 	height: auto;
+}
+
+/* Avoid giant blank hero when featured image is missing on local/app QA. */
+.single-tnf_news .wp-block-post-featured-image:empty,
+.single-post .wp-block-post-featured-image:empty,
+.single-tnf_news .wp-block-post-featured-image:has(img[src='']),
+.single-post .wp-block-post-featured-image:has(img[src='']),
+.single-tnf_news .wp-block-post-featured-image:has(img:not([src])),
+.single-post .wp-block-post-featured-image:has(img:not([src])) {
+	display: none !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	box-shadow: none !important;
 }
 
 .single-tnf_news .wp-block-comments.wp-block-comments-query-loop,
@@ -558,7 +573,7 @@ a.tnf-news-byline__name:hover {
 
 	.single-tnf_news .wp-block-post-featured-image img,
 	.single-post .wp-block-post-featured-image img {
-		max-height: min(48vh, 320px);
+		max-height: min(38vh, 260px);
 		object-fit: cover;
 	}
 

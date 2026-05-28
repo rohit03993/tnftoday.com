@@ -204,17 +204,46 @@
 .tnf-capacitor-app.single-post .tnf-news-single-main > .alignfull {
 	max-width: 100% !important;
 	width: 100% !important;
-	padding-left: max(16px, env(safe-area-inset-left)) !important;
-	padding-right: max(16px, env(safe-area-inset-right)) !important;
+	padding-left: max(8px, env(safe-area-inset-left)) !important;
+	padding-right: max(8px, env(safe-area-inset-right)) !important;
 	box-sizing: border-box;
+}
+
+/* App preview on laptop still inherits block "constrained" widths unless forced. */
+.tnf-capacitor-app.single-tnf_news .tnf-news-single-main.is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)),
+.tnf-capacitor-app.single-post .tnf-news-single-main.is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)),
+.tnf-capacitor-app.single-tnf_news .tnf-news-single-main .is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)),
+.tnf-capacitor-app.single-post .tnf-news-single-main .is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)),
+.tnf-capacitor-app.single-tnf_news .tnf-news-single-main .wp-block-post-content,
+.tnf-capacitor-app.single-post .tnf-news-single-main .wp-block-post-content,
+.tnf-capacitor-app.single-tnf_news .tnf-news-single-main .wp-block-post-content.is-layout-constrained,
+.tnf-capacitor-app.single-post .tnf-news-single-main .wp-block-post-content.is-layout-constrained {
+	max-width: 100% !important;
+	width: 100% !important;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
 }
 
 .tnf-capacitor-app.single-tnf_news .wp-block-post-title,
 .tnf-capacitor-app.single-post .wp-block-post-title {
 	font-size: 1.35rem !important;
 	line-height: 1.28 !important;
-	padding: 12px 0 8px;
+	padding: 8px 0 8px;
 	margin: 0 !important;
+}
+
+.tnf-capacitor-app.single-tnf_news .wp-block-post-featured-image,
+.tnf-capacitor-app.single-post .wp-block-post-featured-image {
+	margin-bottom: 10px !important;
+	border-radius: 12px;
+	overflow: hidden;
+	background: #e9edf4;
+}
+
+.tnf-capacitor-app.single-tnf_news .wp-block-post-featured-image img,
+.tnf-capacitor-app.single-post .wp-block-post-featured-image img {
+	max-height: min(34vh, 240px);
+	object-fit: cover;
 }
 
 .tnf-capacitor-app .tnf-news-meta-head {
@@ -230,10 +259,10 @@
 	max-width: 100%;
 	box-sizing: border-box;
 	background: var(--tnf-app-surface);
-	border-radius: var(--tnf-app-radius);
-	padding: 18px 16px 22px;
-	border: 1px solid var(--tnf-app-line);
-	box-shadow: 0 2px 12px rgba(15, 19, 32, 0.04);
+	border-radius: 10px;
+	padding: 12px 10px 16px;
+	border: 0;
+	box-shadow: none;
 }
 
 .tnf-capacitor-app .tnf-news-content-body .entry-content,
@@ -242,9 +271,21 @@
 	width: 100% !important;
 }
 
+/* WordPress block flow adds per-child content max-width; remove it in app reading mode. */
+.tnf-capacitor-app.single-tnf_news .tnf-news-content-body .wp-block-post-content.is-layout-flow > *,
+.tnf-capacitor-app.single-post .tnf-news-content-body .wp-block-post-content.is-layout-flow > *,
+.tnf-capacitor-app.single-tnf_news .tnf-news-content-body .wp-block-post-content.is-layout-constrained > *,
+.tnf-capacitor-app.single-post .tnf-news-content-body .wp-block-post-content.is-layout-constrained > * {
+	max-width: 100% !important;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
 .tnf-capacitor-app .tnf-news-content-body .entry-content p {
 	font-size: 1.0625rem;
 	line-height: 1.75;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
 }
 
 .tnf-capacitor-app .tnf-share-btn {
