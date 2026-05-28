@@ -1373,3 +1373,175 @@
 		display: none;
 	}
 }
+
+/* Android large: 412x915 baseline */
+@media (max-width: 412px) {
+	.tnf-epaper__toolbar {
+		gap: 0.32rem 0.38rem;
+	}
+
+	.tnf-epaper__toolbar-right {
+		flex-basis: 100%;
+	}
+
+	.tnf-epaper__select {
+		max-width: 38vw;
+	}
+
+	.tnf-epaper__zoom-btn {
+		min-width: 2.2rem;
+		min-height: 2.35rem;
+	}
+
+	.tnf-epaper__tool-btn {
+		min-height: 2.45rem;
+		padding: 0 0.62rem;
+	}
+
+	.tnf-epaper__mobile-bar .tnf-epaper__nav-btn {
+		min-width: 5.2rem;
+		min-height: 2.45rem;
+	}
+}
+
+/* Android medium: 393x851 */
+@media (max-width: 393px) {
+	.tnf-epaper__masthead {
+		padding: 0.5rem 0.55rem 0.6rem;
+	}
+
+	.tnf-epaper__title {
+		font-size: 0.88rem;
+	}
+
+	.tnf-epaper__date {
+		font-size: 0.76rem;
+	}
+
+	.tnf-epaper__toolbar {
+		padding: 0.34rem 0.38rem;
+	}
+
+	.tnf-epaper__select {
+		min-width: 5.2rem;
+		max-width: 36vw;
+	}
+
+	.tnf-epaper__zoom-btn--value {
+		min-width: 3rem;
+	}
+
+	.tnf-epaper-share--toolbar {
+		justify-content: flex-start;
+	}
+
+	.tnf-epaper-share--toolbar .tnf-epaper-share__links {
+		max-width: min(100%, calc(100vw - 9.2rem));
+	}
+
+	.tnf-epaper__thumb {
+		flex: 0 0 78px;
+		width: 78px;
+	}
+
+	.tnf-epaper__figure {
+		min-height: calc(100dvh - 212px);
+	}
+
+	.tnf-epaper__page-img,
+	.tnf-epaper__pdfjs-canvas {
+		max-height: calc(100dvh - 226px);
+	}
+}
+
+/* Android small: 360x640 (strictest constraints) */
+@media (max-width: 360px) {
+	.tnf-epaper {
+		padding-left: max(8px, env(safe-area-inset-left));
+		padding-right: max(8px, env(safe-area-inset-right));
+	}
+
+	.tnf-epaper__toolbar {
+		padding: 0.3rem 0.32rem;
+		gap: 0.28rem 0.3rem;
+	}
+
+	.tnf-epaper__toolbar-left {
+		gap: 0.28rem 0.3rem;
+	}
+
+	.tnf-epaper__toolbar-right {
+		gap: 0.28rem 0.3rem;
+	}
+
+	.tnf-epaper__select-wrap {
+		flex: 1 1 auto;
+	}
+
+	.tnf-epaper__select {
+		min-width: 4.9rem;
+		max-width: 42vw;
+		font-size: 0.78rem;
+	}
+
+	.tnf-epaper__zoom-btn {
+		min-width: 2.1rem;
+		min-height: 2.3rem;
+		padding: 0.3rem 0.38rem;
+	}
+
+	.tnf-epaper__zoom-btn--value {
+		min-width: 2.75rem;
+		font-size: 0.68rem;
+	}
+
+	.tnf-epaper__tool-btn {
+		min-height: 2.4rem;
+		padding: 0 0.54rem;
+	}
+
+	.tnf-epaper__tool-btn .tnf-epaper__tool-text {
+		font-size: 0.63rem;
+	}
+
+	.tnf-epaper-share--toolbar .tnf-epaper-share__links {
+		max-width: min(100%, calc(100vw - 8.4rem));
+	}
+
+	.tnf-epaper-share--toolbar .tnf-epaper-share__btn {
+		width: 1.9rem;
+		min-width: 1.9rem;
+		min-height: 1.9rem;
+	}
+
+	.tnf-epaper__thumb {
+		flex: 0 0 72px;
+		width: 72px;
+	}
+
+	.tnf-epaper__figure {
+		min-height: calc(100dvh - 232px);
+		padding: 0.35rem;
+	}
+
+	.tnf-epaper__page-img,
+	.tnf-epaper__pdfjs-canvas {
+		max-height: calc(100dvh - 244px);
+	}
+
+	.tnf-epaper__mobile-bar {
+		gap: 0.5rem;
+		padding: 0.35rem;
+	}
+
+	.tnf-epaper__mobile-bar .tnf-epaper__nav-btn {
+		min-width: 4.55rem;
+		min-height: 2.35rem;
+		font-size: 0.76rem;
+	}
+
+	.tnf-epaper__mobile-status {
+		min-width: 4.25rem;
+		font-size: 0.76rem;
+	}
+}

@@ -1097,7 +1097,12 @@
 				}
 			});
 			if (activeEl && typeof activeEl.scrollIntoView === 'function') {
-				activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+				var isSmallScreen = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width: 412px)').matches;
+				activeEl.scrollIntoView({
+					block: 'nearest',
+					inline: 'nearest',
+					behavior: isSmallScreen ? 'auto' : 'smooth'
+				});
 			}
 		}
 
