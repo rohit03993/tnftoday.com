@@ -255,7 +255,32 @@
 	}
 
 	function initLazyImages() {
+		var fallback = (cfg.placeholderImageUrl || '').trim();
+		function patchBrokenImage(img) {
+			if (!(img instanceof HTMLImageElement)) {
+				return;
+			}
+			if (!fallback) {
+				return;
+			}
+			img.addEventListener(
+				'error',
+				function () {
+					if (img.dataset.tnfFallbackApplied === '1') {
+						return;
+					}
+					img.dataset.tnfFallbackApplied = '1';
+					img.src = fallback;
+					img.classList.add('tnf-img-fallback');
+				},
+				{ once: true }
+			);
+		}
+
 		if (!('IntersectionObserver' in window)) {
+			document.querySelectorAll('img').forEach(function (img) {
+				patchBrokenImage(img);
+			});
 			return;
 		}
 		var seen = 0;
@@ -276,6 +301,7 @@
 					if (!img.getAttribute('decoding')) {
 						img.decoding = 'async';
 					}
+					patchBrokenImage(img);
 					observer.unobserve(img);
 					seen += 1;
 					if (seen >= max) {
@@ -290,7 +316,13 @@
 			if (seen >= max) {
 				return;
 			}
+			patchBrokenImage(img);
 			io.observe(img);
+		});
+
+		// Also patch images that already have loading attr.
+		document.querySelectorAll('img[loading]').forEach(function (img) {
+			patchBrokenImage(img);
 		});
 	}
 

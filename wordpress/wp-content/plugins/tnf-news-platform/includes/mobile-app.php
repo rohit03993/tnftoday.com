@@ -241,6 +241,7 @@ function tnf_enqueue_navigation_loader_assets(bool $is_app): void {
 			'homeUrl'     => home_url('/'),
 			'epaperUrl'   => home_url('/epaper/'),
 			'videosUrl'   => home_url('/videos/'),
+			'placeholderImageUrl' => TNF_NEWS_PLATFORM_URL . 'assets/images/tnf-placeholder-news.svg',
 			'loginUrl'    => function_exists('tnf_auth_page_url') ? tnf_auth_page_url('login') : home_url('/login/'),
 			'accountUrl'  => function_exists('tnf_auth_page_url') ? tnf_auth_page_url('my-account') : home_url('/my-account/'),
 			'isLoggedIn'  => is_user_logged_in(),
