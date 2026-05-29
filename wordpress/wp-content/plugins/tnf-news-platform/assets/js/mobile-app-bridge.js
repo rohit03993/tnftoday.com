@@ -566,11 +566,20 @@
 		);
 	}
 
-	function initPushNotifications() {
+	function pushRegistrationAllowed() {
+		// Native Push.register() crashes on Android when Firebase is not configured (no google-services.json).
+		if (!cfg.pushEnabled) {
+			return false;
+		}
 		var Push = plugin('PushNotifications');
-		if (!Push || typeof Push.requestPermissions !== 'function') {
+		return !!(Push && typeof Push.checkPermissions === 'function' && typeof Push.register === 'function');
+	}
+
+	function initPushNotifications() {
+		if (!pushRegistrationAllowed()) {
 			return;
 		}
+		var Push = plugin('PushNotifications');
 		Push.checkPermissions()
 			.then(function (perm) {
 				if (perm.receive === 'granted') {

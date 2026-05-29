@@ -4,16 +4,18 @@ import android.os.Bundle;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
-import androidx.activity.OnBackPressedCallback;
-
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();
 		configureWebView();
-		configureBackNavigation();
 	}
 
 	private void configureWebView() {
@@ -31,18 +33,5 @@ public class MainActivity extends BridgeActivity {
 		settings.setBuiltInZoomControls(false);
 		settings.setDisplayZoomControls(false);
 		settings.setSupportZoom(false);
-	}
-
-	private void configureBackNavigation() {
-		getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-			@Override
-			public void handleOnBackPressed() {
-				if (getBridge() != null && getBridge().getWebView() != null && getBridge().getWebView().canGoBack()) {
-					getBridge().getWebView().goBack();
-					return;
-				}
-				finish();
-			}
-		});
 	}
 }

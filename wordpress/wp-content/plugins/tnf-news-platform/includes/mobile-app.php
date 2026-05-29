@@ -252,6 +252,8 @@ function tnf_enqueue_navigation_loader_assets(bool $is_app): void {
 			'logoUrl'     => tnf_mobile_app_logo_url(),
 			'appQuery'    => $is_app ? 'tnf_app=1' : '',
 			'isApp'       => $is_app,
+			// Enable only after Firebase google-services.json is added to the Android app (see mobile-app/android).
+			'pushEnabled' => (bool) apply_filters( 'tnf_mobile_push_enabled', false ),
 			'i18n'        => array(
 				'loading'      => __('Loading…', 'tnf-news-platform'),
 				'offlineTitle' => __('No internet connection', 'tnf-news-platform'),
