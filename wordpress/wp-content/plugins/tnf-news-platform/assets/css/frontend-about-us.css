@@ -1,0 +1,759 @@
+/**
+ * About Us — full-width desktop editorial layout (no images).
+ */
+
+/* —— Break theme constrained column on this page —— */
+body.tnf-about-us-page .wp-site-blocks,
+body.tnf-about-us-page .wp-block-group.alignfull,
+body.tnf-about-us-page main,
+body.tnf-about-us-page main > .wp-block-group,
+body.tnf-about-us-page .entry-content,
+body.tnf-about-us-page .wp-block-post-content,
+body.tnf-about-us-page .is-layout-constrained,
+body.tnf-about-us-page .is-layout-constrained > :where(:not(.alignleft):not(.alignright):not(.alignfull)) {
+	max-width: none !important;
+	width: 100% !important;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+body.tnf-about-us-page .wp-block-post-title,
+body.tnf-about-us-page .wp-block-post-featured-image {
+	display: none !important;
+}
+
+body.tnf-about-us-page main.wp-block-group,
+body.tnf-about-us-page main .wp-block-group.alignfull {
+	margin-top: 0 !important;
+	padding-top: 0 !important;
+}
+
+.tnf-about-us {
+	--tnf-au-red: #e30613;
+	--tnf-au-red-soft: rgba(227, 6, 19, 0.07);
+	--tnf-au-ink: #0f172a;
+	--tnf-au-body: #334155;
+	--tnf-au-muted: #64748b;
+	--tnf-au-line: #e2e8f0;
+	--tnf-au-surface: #f8fafc;
+	--tnf-au-white: #fff;
+	--tnf-au-radius: 14px;
+	--tnf-au-max: 1320px;
+	--tnf-au-prose: 68ch;
+	--tnf-au-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 32px rgba(15, 23, 42, 0.06);
+	--tnf-au-shadow-hover: 0 4px 8px rgba(15, 23, 42, 0.04), 0 20px 48px rgba(15, 23, 42, 0.1);
+	width: 100%;
+	color: var(--tnf-au-body);
+	font-size: 1.0625rem;
+	line-height: 1.75;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* —— Hero —— */
+.tnf-about-us__hero {
+	background: linear-gradient(145deg, #0b1220 0%, #0f172a 55%, #1a0508 100%);
+	color: var(--tnf-au-white);
+	padding: clamp(2.75rem, 5vw, 4.5rem) clamp(1.25rem, 4vw, 3rem) clamp(3rem, 6vw, 5rem);
+	position: relative;
+	overflow: hidden;
+}
+
+.tnf-about-us__hero::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: min(55vw, 640px);
+	height: 100%;
+	background: linear-gradient(135deg, transparent 30%, rgba(227, 6, 19, 0.12) 100%);
+	pointer-events: none;
+}
+
+.tnf-about-us__hero::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background-image:
+		linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+	background-size: 56px 56px;
+	mask-image: linear-gradient(to bottom, #000 50%, transparent);
+	pointer-events: none;
+}
+
+.tnf-about-us__hero-inner {
+	position: relative;
+	z-index: 1;
+	max-width: var(--tnf-au-max);
+	margin: 0 auto;
+}
+
+.tnf-about-us__brand {
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	margin-bottom: 1.5rem;
+}
+
+.tnf-about-us__brand-mark {
+	display: block;
+	width: 4px;
+	height: 2.75rem;
+	background: var(--tnf-au-red);
+	border-radius: 2px;
+	flex-shrink: 0;
+}
+
+.tnf-about-us__brand-name {
+	font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+	font-weight: 800;
+	letter-spacing: 0.14em;
+	line-height: 1.1;
+}
+
+.tnf-about-us__brand-type {
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: rgba(255, 255, 255, 0.5);
+}
+
+.tnf-about-us__hero-kicker {
+	display: inline-block;
+	margin: 0 0 1rem;
+	padding: 0.4rem 0.9rem;
+	border-radius: 6px;
+	background: rgba(227, 6, 19, 0.15);
+	border: 1px solid rgba(227, 6, 19, 0.35);
+	color: #fecaca;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+
+.tnf-about-us__hero h1 {
+	margin: 0 0 0.75rem;
+	font-size: clamp(1.85rem, 3.5vw, 3.25rem);
+	line-height: 1.12;
+	font-weight: 800;
+	letter-spacing: -0.025em;
+}
+
+.tnf-about-us__hero-sub {
+	margin: 0 0 0.85rem;
+	font-size: clamp(1.05rem, 2vw, 1.45rem);
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.92);
+}
+
+.tnf-about-us__hero-tagline {
+	margin: 0;
+	max-width: 62ch;
+	font-size: 1rem;
+	color: rgba(255, 255, 255, 0.6);
+	line-height: 1.65;
+}
+
+.tnf-about-us__hero-tagline em {
+	font-style: normal;
+	color: #fca5a5;
+	font-weight: 600;
+}
+
+/* —— Stats —— */
+.tnf-about-us__stats-wrap {
+	background: var(--tnf-au-white);
+	border-bottom: 1px solid var(--tnf-au-line);
+	box-shadow: 0 4px 24px rgba(15, 23, 42, 0.04);
+}
+
+.tnf-about-us__stats {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	max-width: var(--tnf-au-max);
+	margin: 0 auto;
+	padding: 0 clamp(1.25rem, 4vw, 3rem);
+}
+
+.tnf-about-us__stat {
+	padding: 1.5rem 1.25rem;
+	text-align: center;
+	border-right: 1px solid var(--tnf-au-line);
+}
+
+.tnf-about-us__stat:last-child {
+	border-right: none;
+}
+
+.tnf-about-us__stat strong {
+	display: block;
+	font-size: clamp(1.15rem, 1.8vw, 1.5rem);
+	font-weight: 800;
+	color: var(--tnf-au-ink);
+	margin-bottom: 0.25rem;
+}
+
+.tnf-about-us__stat span {
+	display: block;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--tnf-au-muted);
+}
+
+/* —— Shell & sections —— */
+.tnf-about-us__shell {
+	max-width: var(--tnf-au-max);
+	margin: 0 auto;
+	padding: 0 clamp(1.25rem, 4vw, 3rem);
+}
+
+.tnf-about-us__shell--wide {
+	max-width: none;
+	padding-left: clamp(1.25rem, 4vw, 3rem);
+	padding-right: clamp(1.25rem, 4vw, 3rem);
+}
+
+.tnf-about-us__shell--wide .tnf-about-us__committees {
+	max-width: var(--tnf-au-max);
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.tnf-about-us__section {
+	padding: clamp(2.5rem, 5vw, 4.5rem) 0;
+}
+
+.tnf-about-us__section--alt {
+	background: var(--tnf-au-surface);
+}
+
+/* Desktop: side-by-side title + content */
+.tnf-about-us__section-grid {
+	display: block;
+}
+
+.tnf-about-us__section-head {
+	margin-bottom: 1.75rem;
+}
+
+.tnf-about-us__section-head--center {
+	max-width: 780px;
+	margin-left: auto;
+	margin-right: auto;
+	text-align: center;
+}
+
+.tnf-about-us__section-head--center + .tnf-about-us__committees,
+.tnf-about-us__section-head--center + .tnf-about-us__cards {
+	margin-top: 0.5rem;
+}
+
+.tnf-about-us__section-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.65rem;
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: var(--tnf-au-red);
+}
+
+.tnf-about-us__section-label::before {
+	content: "";
+	width: 1.25rem;
+	height: 2px;
+	background: var(--tnf-au-red);
+	border-radius: 1px;
+}
+
+.tnf-about-us__section-head--center .tnf-about-us__section-label::before {
+	display: none;
+}
+
+.tnf-about-us__section-head h2 {
+	margin: 0 0 0.45rem;
+	font-size: clamp(1.45rem, 2.5vw, 2.35rem);
+	line-height: 1.18;
+	font-weight: 800;
+	color: var(--tnf-au-ink);
+	letter-spacing: -0.02em;
+}
+
+.tnf-about-us__section-head p {
+	margin: 0;
+	color: var(--tnf-au-muted);
+	font-size: 1.05rem;
+	line-height: 1.65;
+}
+
+.tnf-about-us__prose {
+	max-width: var(--tnf-au-prose);
+}
+
+.tnf-about-us__prose--wide {
+	max-width: none;
+}
+
+.tnf-about-us__prose p {
+	margin: 0 0 1rem;
+}
+
+.tnf-about-us__prose p:last-child {
+	margin-bottom: 0;
+}
+
+.tnf-about-us__lead {
+	font-size: clamp(1.1rem, 1.5vw, 1.28rem);
+	font-weight: 500;
+	color: var(--tnf-au-ink);
+	line-height: 1.75;
+}
+
+.tnf-about-us__lead--spaced {
+	margin-bottom: 1.75rem;
+}
+
+/* —— Vision / Mission —— */
+.tnf-about-us__cards {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1.25rem;
+	max-width: var(--tnf-au-max);
+	margin: 0 auto;
+}
+
+.tnf-about-us__card {
+	background: var(--tnf-au-white);
+	border: 1px solid var(--tnf-au-line);
+	border-radius: var(--tnf-au-radius);
+	padding: clamp(1.5rem, 3vw, 2.25rem);
+	box-shadow: var(--tnf-au-shadow);
+	position: relative;
+	overflow: hidden;
+	transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.tnf-about-us__card::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 4px;
+	background: linear-gradient(90deg, var(--tnf-au-red), #ff4d4d);
+}
+
+.tnf-about-us__card:hover {
+	box-shadow: var(--tnf-au-shadow-hover);
+	transform: translateY(-3px);
+}
+
+.tnf-about-us__card-en {
+	display: block;
+	margin-bottom: 0.45rem;
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: var(--tnf-au-red);
+}
+
+.tnf-about-us__card h3 {
+	margin: 0 0 0.75rem;
+	font-size: clamp(1.2rem, 2vw, 1.5rem);
+	font-weight: 800;
+	color: var(--tnf-au-ink);
+}
+
+.tnf-about-us__card p {
+	margin: 0;
+	font-size: 1.02rem;
+	color: var(--tnf-au-body);
+	line-height: 1.7;
+}
+
+/* —— Journey —— */
+.tnf-about-us__split {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1.25rem;
+}
+
+.tnf-about-us__split-item {
+	background: var(--tnf-au-white);
+	border: 1px solid var(--tnf-au-line);
+	border-radius: var(--tnf-au-radius);
+	padding: clamp(1.35rem, 2.5vw, 2rem);
+	box-shadow: var(--tnf-au-shadow);
+}
+
+.tnf-about-us__split-tag {
+	display: inline-block;
+	margin-bottom: 0.75rem;
+	padding: 0.3rem 0.65rem;
+	border-radius: 6px;
+	background: var(--tnf-au-red-soft);
+	color: var(--tnf-au-red);
+	font-size: 0.68rem;
+	font-weight: 800;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.tnf-about-us__split-item p {
+	margin: 0;
+	font-size: 1.02rem;
+	line-height: 1.7;
+}
+
+/* —— Heritage —— */
+.tnf-about-us__heritage {
+	margin-top: 1.5rem;
+	padding: 1.35rem 1.5rem;
+	border-radius: var(--tnf-au-radius);
+	background: var(--tnf-au-white);
+	border: 1px solid var(--tnf-au-line);
+	border-left: 4px solid var(--tnf-au-red);
+	box-shadow: var(--tnf-au-shadow);
+	font-size: 1rem;
+	line-height: 1.75;
+}
+
+.tnf-about-us__section--alt .tnf-about-us__heritage {
+	background: var(--tnf-au-white);
+}
+
+/* —— Committees (desktop: 4 columns) —— */
+.tnf-about-us__committees {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.tnf-about-us__committee {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+	background: var(--tnf-au-white);
+	border: 1px solid var(--tnf-au-line);
+	border-radius: var(--tnf-au-radius);
+	padding: 1.35rem 1.25rem;
+	box-shadow: var(--tnf-au-shadow);
+	transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+	min-height: 100%;
+}
+
+.tnf-about-us__committee:hover {
+	border-color: rgba(227, 6, 19, 0.35);
+	box-shadow: var(--tnf-au-shadow-hover);
+	transform: translateY(-2px);
+}
+
+.tnf-about-us__committee-num {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.35rem;
+	height: 2.35rem;
+	border-radius: 8px;
+	background: var(--tnf-au-ink);
+	color: var(--tnf-au-white);
+	font-size: 0.78rem;
+	font-weight: 800;
+	flex-shrink: 0;
+}
+
+.tnf-about-us__committee h3 {
+	margin: 0 0 0.4rem;
+	font-size: 0.95rem;
+	font-weight: 700;
+	line-height: 1.35;
+	color: var(--tnf-au-ink);
+}
+
+.tnf-about-us__committee p {
+	margin: 0;
+	font-size: 0.92rem;
+	color: var(--tnf-au-muted);
+	line-height: 1.6;
+	flex-grow: 1;
+}
+
+/* —— Pledge —— */
+.tnf-about-us__pledge {
+	margin-bottom: 1.75rem;
+	padding: clamp(1.5rem, 3vw, 2.5rem);
+	border-radius: var(--tnf-au-radius);
+	background: var(--tnf-au-ink);
+	box-shadow: var(--tnf-au-shadow-hover);
+}
+
+.tnf-about-us__subhead {
+	margin: 0 0 0.85rem;
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: #fca5a5;
+}
+
+.tnf-about-us__pledge blockquote {
+	margin: 0;
+	padding: 0;
+	border: none;
+	font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+	font-weight: 500;
+	font-style: normal;
+	line-height: 1.75;
+	color: var(--tnf-au-white);
+	max-width: 75ch;
+}
+
+.tnf-about-us__pledge blockquote::before {
+	content: "\201C";
+	display: block;
+	margin-bottom: 0.25rem;
+	font-size: 2.75rem;
+	line-height: 1;
+	color: var(--tnf-au-red);
+	font-weight: 800;
+}
+
+/* —— Meta row —— */
+.tnf-about-us__meta-row {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1rem;
+	margin-bottom: 1.75rem;
+}
+
+.tnf-about-us__meta-card {
+	background: var(--tnf-au-white);
+	border: 1px solid var(--tnf-au-line);
+	border-radius: var(--tnf-au-radius);
+	padding: 1.35rem 1.25rem;
+	box-shadow: var(--tnf-au-shadow);
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tnf-about-us__meta-card:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--tnf-au-shadow-hover);
+}
+
+.tnf-about-us__meta-label {
+	display: block;
+	margin-bottom: 0.4rem;
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--tnf-au-muted);
+}
+
+.tnf-about-us__meta-value {
+	margin: 0;
+	font-size: clamp(1rem, 1.5vw, 1.15rem);
+	font-weight: 700;
+	color: var(--tnf-au-ink);
+	line-height: 1.4;
+}
+
+.tnf-about-us__meta-value a {
+	color: var(--tnf-au-red);
+	text-decoration: none;
+}
+
+.tnf-about-us__meta-value a:hover {
+	text-decoration: underline;
+}
+
+/* —— Achievements bento —— */
+.tnf-about-us__achievements-grid {
+	display: flex;
+	flex-direction: column;
+	gap: 1.25rem;
+	margin-bottom: 1.75rem;
+}
+
+.tnf-about-us__highlights {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.tnf-about-us__highlight {
+	background: var(--tnf-au-white);
+	border: 1px solid var(--tnf-au-line);
+	border-radius: var(--tnf-au-radius);
+	padding: 1.5rem 1.35rem;
+	box-shadow: var(--tnf-au-shadow);
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tnf-about-us__highlight:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--tnf-au-shadow-hover);
+}
+
+.tnf-about-us__highlight-num {
+	display: block;
+	margin-bottom: 0.65rem;
+	font-size: 0.68rem;
+	font-weight: 800;
+	letter-spacing: 0.16em;
+	color: var(--tnf-au-red);
+}
+
+.tnf-about-us__highlight h3 {
+	margin: 0 0 0.5rem;
+	font-size: 1.05rem;
+	font-weight: 800;
+	color: var(--tnf-au-ink);
+	line-height: 1.3;
+}
+
+.tnf-about-us__highlight p {
+	margin: 0;
+	font-size: 0.95rem;
+	color: var(--tnf-au-muted);
+	line-height: 1.65;
+}
+
+.tnf-about-us__callout {
+	margin-top: 1.25rem;
+	padding: 1.2rem 1.4rem;
+	border-radius: var(--tnf-au-radius);
+	background: var(--tnf-au-red-soft);
+	border: 1px solid rgba(227, 6, 19, 0.12);
+	font-size: 1.02rem;
+	line-height: 1.65;
+	max-width: var(--tnf-au-prose);
+}
+
+.tnf-about-us__callout strong {
+	color: var(--tnf-au-red);
+}
+
+/* —— Desktop: use full width —— */
+@media (min-width: 1024px) {
+	.tnf-about-us__section-grid {
+		display: grid;
+		grid-template-columns: minmax(240px, 320px) 1fr;
+		gap: clamp(2rem, 4vw, 4rem);
+		align-items: start;
+	}
+
+	.tnf-about-us__section-grid .tnf-about-us__section-head {
+		margin-bottom: 0;
+		position: sticky;
+		top: 5rem;
+	}
+
+	.tnf-about-us__section-grid .tnf-about-us__prose {
+		max-width: none;
+	}
+
+	.tnf-about-us__section-grid--stack .tnf-about-us__section-head {
+		position: static;
+	}
+
+	.tnf-about-us__committees {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 1.1rem;
+	}
+
+	.tnf-about-us__committee h3 {
+		font-size: 0.88rem;
+	}
+
+	.tnf-about-us__split {
+		gap: 1.5rem;
+	}
+
+	.tnf-about-us__cards {
+		gap: 1.5rem;
+	}
+
+	.tnf-about-us__achievements-grid {
+		display: grid;
+		grid-template-columns: 1.4fr 1fr;
+		gap: 1.25rem;
+		align-items: start;
+	}
+
+	.tnf-about-us__achievements-grid .tnf-about-us__pledge {
+		margin-bottom: 0;
+		height: 100%;
+	}
+
+	.tnf-about-us__meta-row {
+		grid-template-columns: 1fr;
+		gap: 0.85rem;
+		margin-bottom: 0;
+	}
+}
+
+@media (min-width: 1280px) {
+	.tnf-about-us__hero h1 {
+		max-width: 20ch;
+	}
+
+	.tnf-about-us__highlights {
+		gap: 1.25rem;
+	}
+}
+
+/* —— Tablet —— */
+@media (max-width: 1023px) {
+	.tnf-about-us__committees {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.tnf-about-us__cards,
+	.tnf-about-us__split,
+	.tnf-about-us__meta-row,
+	.tnf-about-us__highlights {
+		grid-template-columns: 1fr;
+	}
+
+	.tnf-about-us__stats {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.tnf-about-us__stat:nth-child(2) {
+		border-right: none;
+	}
+
+	.tnf-about-us__stat:nth-child(1),
+	.tnf-about-us__stat:nth-child(2) {
+		border-bottom: 1px solid var(--tnf-au-line);
+	}
+}
+
+@media (max-width: 520px) {
+	.tnf-about-us__stats {
+		grid-template-columns: 1fr;
+	}
+
+	.tnf-about-us__stat {
+		border-right: none;
+		border-bottom: 1px solid var(--tnf-au-line);
+	}
+
+	.tnf-about-us__stat:last-child {
+		border-bottom: none;
+	}
+
+	.tnf-about-us__committees {
+		grid-template-columns: 1fr;
+	}
+}

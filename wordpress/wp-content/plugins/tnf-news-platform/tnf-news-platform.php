@@ -29,6 +29,7 @@ require_once TNF_NEWS_PLATFORM_PATH . 'includes/pdf-integration.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/header-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/footer-settings.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/legal-pages.php';
+require_once TNF_NEWS_PLATFORM_PATH . 'includes/about-us-page.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-ui.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-dashboard-stats.php';
 require_once TNF_NEWS_PLATFORM_PATH . 'includes/admin-branding.php';

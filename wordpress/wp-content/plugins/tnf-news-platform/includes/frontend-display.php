@@ -140,6 +140,10 @@ function tnf_news_nav_sections(): array {
 					'label' => __('Home', 'tnf-news-platform'),
 					'url'   => home_url('/'),
 				),
+				array(
+					'label' => __('About Us', 'tnf-news-platform'),
+					'url'   => home_url('/about-us/'),
+				),
 			),
 		),
 		array(
@@ -244,6 +248,10 @@ function tnf_header_primary_nav_items(): array {
 		$link('religion'),
 		$link('lifestyle'),
 		$link('sports'),
+		array(
+			'label' => __('About Us', 'tnf-news-platform'),
+			'url'   => home_url('/about-us/'),
+		),
 	);
 }
 
