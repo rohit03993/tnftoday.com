@@ -33,7 +33,7 @@ function tnf_is_lightweight_client(): bool {
 	if (function_exists('tnf_is_capacitor_app') && tnf_is_capacitor_app()) {
 		return true;
 	}
-	return wp_is_mobile();
+	return function_exists('wp_is_mobile') && wp_is_mobile();
 }
 
 /**

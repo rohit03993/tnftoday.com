@@ -46,6 +46,10 @@ function tnf_mobile_app_persist_preview_cookie(): void {
 	if (! isset($_GET['tnf_app']) || '1' !== (string) wp_unslash($_GET['tnf_app'])) {
 		return;
 	}
+	// Do not stick app-preview mode on desktop browsers (avoids app UI + extra JS on wide screens).
+	if (! tnf_is_mobile_web_client()) {
+		return;
+	}
 	if (headers_sent()) {
 		return;
 	}
@@ -61,20 +65,35 @@ function tnf_mobile_app_preview_cookie_active(): bool {
 	return isset($_COOKIE['tnf_app_preview']) && '1' === (string) wp_unslash($_COOKIE['tnf_app_preview']);
 }
 
+/**
+ * True when the client is a phone/tablet browser (not desktop), using WP core detection.
+ */
+function tnf_is_mobile_web_client(): bool {
+	return function_exists('wp_is_mobile') && wp_is_mobile();
+}
+
+/**
+ * True when request is from the Capacitor Android shell (or forced mobile QA preview).
+ *
+ * Desktop browsers never get app chrome — even if ?tnf_app=1 was used earlier (preview cookie).
+ * Real APK is detected via User-Agent token TNFTodayCapacitor.
+ */
 function tnf_is_capacitor_app(): bool {
-	if (isset($_GET['tnf_app']) && '1' === (string) wp_unslash($_GET['tnf_app'])) {
-		return true;
-	}
-	if (tnf_mobile_app_preview_cookie_active()) {
+	$ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+	if ($ua !== '' && str_contains($ua, TNF_CAPACITOR_UA_TOKEN)) {
 		return true;
 	}
 
-	$ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
-	if ($ua === '') {
+	// QA preview (?tnf_app=1 or cookie) — mobile browsers only, never desktop.
+	if (! tnf_is_mobile_web_client()) {
 		return false;
 	}
 
-	return str_contains($ua, TNF_CAPACITOR_UA_TOKEN);
+	if (isset($_GET['tnf_app']) && '1' === (string) wp_unslash($_GET['tnf_app'])) {
+		return true;
+	}
+
+	return tnf_mobile_app_preview_cookie_active();
 }
 
 /**
