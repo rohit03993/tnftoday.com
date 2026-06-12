@@ -13,12 +13,18 @@ if (! defined('ABSPATH')) {
  * Bootstrap performance hooks.
  */
 function tnf_register_performance_home(): void {
+	add_action('template_redirect', 'tnf_perf_homepage_fullpage_cache_serve', 0);
+	add_action('template_redirect', 'tnf_perf_homepage_fullpage_cache_start', 1);
+	add_action('wp', 'tnf_perf_homepage_load_prefetch', 5);
+	add_filter('posts_pre_query', 'tnf_perf_homepage_posts_pre_query', 10, 2);
 	add_action('pre_get_posts', 'tnf_perf_homepage_query_flags', 20);
 	add_filter('style_loader_tag', 'tnf_perf_async_google_fonts', 10, 2);
 	add_action('wp_enqueue_scripts', 'tnf_perf_front_dequeue_bloat', 99);
+	add_action('wp_enqueue_scripts', 'tnf_perf_dequeue_home_assets_off_front', 200);
 	add_action('wp_enqueue_scripts', 'tnf_perf_auth_page_dequeue_heavy_assets', 150);
 	add_filter('wp_get_attachment_image_src', 'tnf_perf_fix_missing_attachment_src', 10, 4);
 	add_filter('post_thumbnail_url', 'tnf_perf_fix_missing_thumbnail_url', 10, 3);
+	add_action('save_post', 'tnf_perf_flush_homepage_caches', 25);
 
 	if (tnf_perf_is_local_dev()) {
 		add_filter('pre_http_request', 'tnf_perf_local_block_slow_external_http', 10, 3);
@@ -263,4 +269,364 @@ function tnf_perf_front_dequeue_bloat(): void {
 
 	wp_deregister_script('wp-embed');
 	wp_dequeue_script('wp-embed');
+}
+
+/**
+ * Cache version — bump invalidates homepage prefetch + full-page cache.
+ */
+function tnf_perf_home_cache_version(): int {
+	return max(1, (int) get_option('tnf_home_query_cache_ver', 1));
+}
+
+/**
+ * Whether full-page homepage cache may run (guest GET, no admin).
+ */
+function tnf_perf_homepage_fullpage_cache_allowed(): bool {
+	if (is_admin() || wp_doing_ajax() || wp_doing_cron()) {
+		return false;
+	}
+	if (! is_front_page() && ! is_home()) {
+		return false;
+	}
+	if (is_user_logged_in()) {
+		return false;
+	}
+	if (isset($_SERVER['REQUEST_METHOD']) && strtoupper((string) $_SERVER['REQUEST_METHOD']) !== 'GET') {
+		return false;
+	}
+	// Allow only ?tnf_app=1 for app preview; skip other query strings (search, etc.).
+	if (! empty($_GET)) {
+		$keys = array_keys($_GET);
+		if ($keys !== array('tnf_app') && $keys !== array()) {
+			return false;
+		}
+	}
+
+	return (bool) apply_filters('tnf_perf_homepage_fullpage_cache_enabled', true);
+}
+
+/**
+ * @return string Transient key for full HTML cache.
+ */
+function tnf_perf_homepage_fullpage_cache_key(): string {
+	$variant = 'web';
+	if (function_exists('tnf_is_capacitor_app') && tnf_is_capacitor_app()) {
+		$variant = 'app';
+	} elseif (isset($_GET['tnf_app']) && (string) $_GET['tnf_app'] === '1') {
+		$variant = 'app';
+	}
+
+	return 'tnf_homepage_html_' . $variant . '_v' . tnf_perf_home_cache_version();
+}
+
+/**
+ * Serve cached homepage HTML and exit (repeat visits).
+ */
+function tnf_perf_homepage_fullpage_cache_serve(): void {
+	if (! tnf_perf_homepage_fullpage_cache_allowed()) {
+		return;
+	}
+
+	$cached = get_transient(tnf_perf_homepage_fullpage_cache_key());
+	if (! is_string($cached) || strlen($cached) < 500) {
+		return;
+	}
+
+	status_header(200);
+	nocache_headers();
+	header('Content-Type: text/html; charset=UTF-8');
+	header('X-TNF-Cache: HIT', true);
+	echo $cached; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- full HTML document.
+	exit;
+}
+
+/**
+ * Start output buffering to store homepage HTML on cache miss.
+ */
+function tnf_perf_homepage_fullpage_cache_start(): void {
+	if (! tnf_perf_homepage_fullpage_cache_allowed()) {
+		return;
+	}
+
+	ob_start('tnf_perf_homepage_fullpage_cache_store');
+}
+
+/**
+ * @param string $html Page HTML.
+ * @return string
+ */
+function tnf_perf_homepage_fullpage_cache_store(string $html): string {
+	if (tnf_perf_homepage_fullpage_cache_allowed() && strlen($html) > 500) {
+		set_transient(tnf_perf_homepage_fullpage_cache_key(), $html, 5 * MINUTE_IN_SECONDS);
+	}
+
+	return $html;
+}
+
+/**
+ * Post types used on the homepage news queries.
+ *
+ * @return array<int, string>
+ */
+function tnf_perf_homepage_news_post_types(): array {
+	if (function_exists('tnf_listing_news_post_types')) {
+		return tnf_listing_news_post_types();
+	}
+	if (post_type_exists('tnf_news')) {
+		return array('tnf_news', 'post');
+	}
+
+	return array('post');
+}
+
+/**
+ * Load (or build) batched homepage query data — one scan instead of many category queries.
+ */
+function tnf_perf_homepage_load_prefetch(): void {
+	if (is_admin() || (! is_front_page() && ! is_home())) {
+		return;
+	}
+
+	$key  = 'tnf_home_prefetch_v' . tnf_perf_home_cache_version();
+	$data = get_transient($key);
+	if (! is_array($data)) {
+		$data = tnf_perf_homepage_build_prefetch();
+		set_transient($key, $data, 5 * MINUTE_IN_SECONDS);
+	}
+
+	$GLOBALS['tnf_home_prefetch'] = $data;
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function tnf_perf_homepage_build_prefetch(): array {
+	$post_types = tnf_perf_homepage_news_post_types();
+	$cat_slugs  = array(
+		'health',
+		'religion',
+		'politics',
+		'sports',
+		'business',
+		'entertainment',
+		'tech',
+		'exclusive',
+		'lifestyle',
+		'cultural',
+		'crime',
+	);
+	$by_cat     = array_fill_keys($cat_slugs, array());
+
+	$recent_q = new WP_Query(
+		array(
+			'post_type'              => $post_types,
+			'post_status'            => 'publish',
+			'posts_per_page'         => 120,
+			'orderby'                => 'date',
+			'order'                  => 'DESC',
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => true,
+			'update_post_term_cache' => true,
+		)
+	);
+
+	$ordered_ids = array();
+	foreach ($recent_q->posts as $post) {
+		if (! $post instanceof WP_Post) {
+			continue;
+		}
+		$ordered_ids[] = (int) $post->ID;
+		$terms         = get_the_terms($post->ID, 'category');
+		if (! is_array($terms)) {
+			continue;
+		}
+		foreach ($terms as $term) {
+			if (! $term instanceof WP_Term) {
+				continue;
+			}
+			$slug = (string) $term->slug;
+			if (isset($by_cat[ $slug ]) && count($by_cat[ $slug ]) < 4) {
+				$by_cat[ $slug ][] = (int) $post->ID;
+			}
+		}
+	}
+	wp_reset_postdata();
+
+	$trending_ids = array();
+	$trending_q   = new WP_Query(
+		array(
+			'post_type'              => $post_types,
+			'post_status'            => 'publish',
+			'posts_per_page'         => 8,
+			'orderby'                => 'comment_count',
+			'order'                  => 'DESC',
+			'no_found_rows'          => true,
+			'fields'                 => 'ids',
+			'update_post_meta_cache' => true,
+			'update_post_term_cache' => false,
+		)
+	);
+	if (is_array($trending_q->posts)) {
+		$trending_ids = array_map('intval', $trending_q->posts);
+	}
+	wp_reset_postdata();
+
+	$video_ids = array();
+	if (post_type_exists('tnf_video')) {
+		$video_q = new WP_Query(
+			array(
+				'post_type'              => 'tnf_video',
+				'post_status'            => 'publish',
+				'posts_per_page'         => 10,
+				'no_found_rows'          => true,
+				'fields'                 => 'ids',
+				'update_post_meta_cache' => true,
+				'update_post_term_cache' => false,
+			)
+		);
+		if (is_array($video_q->posts)) {
+			$video_ids = array_map('intval', $video_q->posts);
+		}
+		wp_reset_postdata();
+	}
+
+	$headline_count = (int) apply_filters('tnf_home_hero_headline_count', 5);
+	$headline_count = max(4, min(6, $headline_count));
+
+	return array(
+		'ordered'   => $ordered_ids,
+		'by_cat'    => $by_cat,
+		'headlines' => array_slice($ordered_ids, 1, $headline_count),
+		'recent'    => array_slice($ordered_ids, 0, 9),
+		'top'       => array_slice($ordered_ids, 0, 6),
+		'trending'  => $trending_ids,
+		'videos'    => $video_ids,
+	);
+}
+
+/**
+ * @param array<int, int> $ids Post IDs.
+ * @return array<int, WP_Post>
+ */
+function tnf_perf_posts_from_ids(array $ids): array {
+	$ids = array_values(array_filter(array_map('intval', $ids)));
+	if ($ids === array()) {
+		return array();
+	}
+
+	_prime_post_caches($ids, true, true);
+	$posts = array();
+	foreach ($ids as $id) {
+		$post = get_post($id);
+		if ($post instanceof WP_Post) {
+			$posts[] = $post;
+		}
+	}
+
+	return $posts;
+}
+
+/**
+ * Serve homepage block queries from prefetch instead of separate SQL per section.
+ *
+ * @param array<int, WP_Post>|null $posts Posts.
+ * @param WP_Query                  $query Query.
+ * @return array<int, WP_Post>|null
+ */
+function tnf_perf_homepage_posts_pre_query(?array $posts, WP_Query $query): ?array {
+	if ($posts !== null || is_admin()) {
+		return $posts;
+	}
+	if (! is_front_page() && ! is_home()) {
+		return $posts;
+	}
+	if ($query->is_main_query()) {
+		return $posts;
+	}
+
+	$prefetch = isset($GLOBALS['tnf_home_prefetch']) && is_array($GLOBALS['tnf_home_prefetch'])
+		? $GLOBALS['tnf_home_prefetch']
+		: null;
+	if ($prefetch === null) {
+		return $posts;
+	}
+
+	$vars     = $query->query_vars;
+	$ppp      = (int) ($vars['posts_per_page'] ?? 0);
+	$offset   = (int) ($vars['offset'] ?? 0);
+	$orderby  = isset($vars['orderby']) ? (string) $vars['orderby'] : 'date';
+	$cat      = isset($vars['category_name']) ? (string) $vars['category_name'] : '';
+	$pt       = $vars['post_type'] ?? 'post';
+
+	if ($cat !== '' && $ppp === 4 && isset($prefetch['by_cat'][ $cat ])) {
+		return tnf_perf_posts_from_ids($prefetch['by_cat'][ $cat ]);
+	}
+
+	if (is_string($pt) && $pt === 'tnf_video' && $ppp === 10 && isset($prefetch['videos'])) {
+		return tnf_perf_posts_from_ids($prefetch['videos']);
+	}
+
+	$post_types = tnf_perf_homepage_news_post_types();
+	$is_news    = false;
+	if (is_array($pt)) {
+		$is_news = array_values($pt) === array_values($post_types);
+	} elseif (is_string($pt) && $pt !== '') {
+		$is_news = in_array($pt, $post_types, true);
+	}
+	if (! $is_news) {
+		return $posts;
+	}
+
+	if ($ppp === 1 && $offset === 0 && $cat === '' && $orderby === 'date' && ! empty($prefetch['ordered'])) {
+		return tnf_perf_posts_from_ids(array((int) $prefetch['ordered'][0]));
+	}
+
+	if ($offset === 1 && $cat === '' && $orderby === 'date' && ! empty($prefetch['headlines'])) {
+		return tnf_perf_posts_from_ids($prefetch['headlines']);
+	}
+
+	if ($ppp === 9 && $offset === 0 && $cat === '' && $orderby === 'date' && ! empty($prefetch['recent'])) {
+		return tnf_perf_posts_from_ids($prefetch['recent']);
+	}
+
+	if ($ppp === 6 && $offset === 0 && $cat === '' && $orderby === 'date' && ! empty($prefetch['top'])) {
+		return tnf_perf_posts_from_ids($prefetch['top']);
+	}
+
+	if ($ppp === 8 && $offset === 0 && $cat === '' && $orderby === 'comment_count' && ! empty($prefetch['trending'])) {
+		return tnf_perf_posts_from_ids($prefetch['trending']);
+	}
+
+	return $posts;
+}
+
+/**
+ * Home rail CSS/JS only on the front page (all devices, not only mobile).
+ */
+function tnf_perf_dequeue_home_assets_off_front(): void {
+	if (is_admin() || is_front_page() || is_home()) {
+		return;
+	}
+
+	wp_dequeue_script('tnf-child-home-news');
+	wp_dequeue_style('tnf-child-home-news');
+}
+
+/**
+ * Invalidate homepage caches when content changes.
+ *
+ * @param int $post_id Post ID.
+ */
+function tnf_perf_flush_homepage_caches(int $post_id): void {
+	if ($post_id <= 0 || wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+		return;
+	}
+
+	$post_type = get_post_type($post_id);
+	$watched   = array('post', 'tnf_news', 'tnf_video', 'tnf_pdf_report', 'page');
+	if (! is_string($post_type) || ! in_array($post_type, $watched, true)) {
+		return;
+	}
+
+	update_option('tnf_home_query_cache_ver', tnf_perf_home_cache_version() + 1, false);
 }
